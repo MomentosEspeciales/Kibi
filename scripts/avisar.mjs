@@ -1,7 +1,7 @@
 // Envía el aviso del día a los móviles suscritos. Lo ejecuta GitHub Actions.
 // Variables: CODIGO_FAMILIAR, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, PUSH_SUBSCRIPTIONS (lista JSON),
 // MODO = auto | hoy | manana, FORZAR = 1 para enviar aunque no sea la hora.
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const Logica = require("../logica.js");
@@ -15,6 +15,8 @@ const hoyMadrid = `${partes.year}-${partes.month}-${partes.day}`;
 const horaMadrid = Number(partes.hour);
 
 let modo = env.MODO || "auto";
+const esPrueba = modo === "prueba";
+if (esPrueba) modo = "manana";
 if (modo === "auto") {
   if (horaMadrid === 7) modo = "hoy";
   else if (horaMadrid === 19) modo = "manana";
@@ -25,16 +27,23 @@ const D = await descifrar(JSON.parse(readFileSync("datos.cifrados.json", "utf8")
 const fecha = modo === "hoy" ? hoyMadrid : Logica.iso(Logica.addDays(Logica.parse(hoyMadrid), 1));
 const aviso = Logica.resumenAviso(D, fecha, modo === "hoy" ? "hoy" : "manana");
 if (!aviso && env.FORZAR !== "1") { console.log(`Nada especial el ${fecha}: no se envía aviso.`); process.exit(0); }
-const mensaje = aviso || { titulo: "Prueba", cuerpo: "Los avisos funcionan en este móvil." };
+const mensaje = esPrueba
+  ? { titulo: "¡Avisos activados! 🩷🩵", cuerpo: "A partir de ahora recibirás lo de cada día a las 7:00 y lo de mañana a las 19:00." + (aviso ? "\n\n" + aviso.titulo + ":\n" + aviso.cuerpo : "") }
+  : aviso || { titulo: "Prueba", cuerpo: "Los avisos funcionan en este móvil." };
 
-const subs = JSON.parse(env.PUSH_SUBSCRIPTIONS || "[]");
+// Móviles: los del secreto PUSH_SUBSCRIPTIONS y los guardados cifrados en suscripciones.cifradas.json.
+let subs = JSON.parse(env.PUSH_SUBSCRIPTIONS || "[]");
+if (existsSync("suscripciones.cifradas.json")) {
+  subs = subs.concat(await descifrar(JSON.parse(readFileSync("suscripciones.cifradas.json", "utf8")), env.CODIGO_FAMILIAR));
+}
+subs = subs.filter((s, i, a) => s && s.endpoint && a.findIndex(x => x.endpoint === s.endpoint) === i);
 if (!subs.length) { console.log("No hay móviles suscritos todavía."); process.exit(0); }
 webpush.setVapidDetails("mailto:gabiarno@gmail.com", env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
 
 let ok = 0;
 for (const s of subs) {
   try {
-    await webpush.sendNotification(s, JSON.stringify({ title: "KiBi · " + mensaje.titulo, body: mensaje.cuerpo, tag: "kibi-" + fecha, url: "./" }), { TTL: 6 * 3600, urgency: "normal" });
+    await webpush.sendNotification(s, JSON.stringify({ title: esPrueba ? "KiBi" : "KiBi · " + mensaje.titulo, body: esPrueba ? mensaje.titulo + "\n" + mensaje.cuerpo : mensaje.cuerpo, tag: "kibi-" + fecha, url: "./" }), { TTL: 6 * 3600, urgency: "normal" });
     ok++;
   } catch (e) {
     console.error(`Fallo al enviar a un móvil (${e.statusCode || "?"}): ${e.statusCode === 404 || e.statusCode === 410 ? "esta suscripción ya no existe, quítala de PUSH_SUBSCRIPTIONS" : e.body || e.message}`);

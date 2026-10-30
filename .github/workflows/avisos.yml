@@ -5,6 +5,10 @@ on:
     # 7:00 y 19:00 en Madrid. Se lanza a dos horas UTC para cubrir horario de invierno y de verano;
     # el script solo envía cuando en Madrid son exactamente las 7 o las 19.
     - cron: "0 5,6,17,18 * * *"
+  # Cuando se añade un móvil, se envía un aviso de prueba
+  push:
+    branches: [main]
+    paths: [suscripciones.cifradas.json]
   workflow_dispatch:
     inputs:
       modo:
@@ -34,8 +38,8 @@ jobs:
       - name: Enviar aviso
         run: node scripts/avisar.mjs
         env:
-          MODO: ${{ github.event_name == 'workflow_dispatch' && inputs.modo || 'auto' }}
-          FORZAR: ${{ github.event_name == 'workflow_dispatch' && inputs.forzar && '1' || '0' }}
+          MODO: ${{ github.event_name == 'workflow_dispatch' && inputs.modo || github.event_name == 'push' && 'prueba' || 'auto' }}
+          FORZAR: ${{ (github.event_name == 'workflow_dispatch' && inputs.forzar || github.event_name == 'push') && '1' || '0' }}
           CODIGO_FAMILIAR: ${{ secrets.CODIGO_FAMILIAR }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}

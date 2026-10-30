@@ -16,7 +16,14 @@ La app es pública en GitHub Pages, pero los datos de los niños están **cifrad
 - **iPhone**: abre la app en Safari → botón Compartir → «Añadir a pantalla de inicio». Abre KiBi desde el icono (los avisos solo funcionan así).
 - **Android**: abre la app en Chrome → menú → «Instalar app».
 
-Después, en la app, pulsa **Activar avisos** y envía el código del móvil que aparece. Ese código se añade al secreto `PUSH_SUBSCRIPTIONS` del repositorio (una lista JSON con un elemento por móvil).
+Después, en la app, pulsa **Activar avisos** y copia el código del móvil que aparece. Para añadirlo a la lista de envío:
+
+```bash
+CODIGO_FAMILIAR=... node scripts/suscribir.mjs "Móvil de Gabi" '<código del móvil>'
+git add suscripciones.cifradas.json && git commit -m "Añadir móvil" && git push
+```
+
+La lista se guarda cifrada en `suscripciones.cifradas.json`. Al subirla, GitHub envía un aviso de prueba a todos los móviles.
 
 ## Secretos del repositorio
 
@@ -24,7 +31,7 @@ Después, en la app, pulsa **Activar avisos** y envía el código del móvil que
 | --- | --- |
 | `CODIGO_FAMILIAR` | El código que descifra los datos |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Claves para firmar los avisos push |
-| `PUSH_SUBSCRIPTIONS` | Lista JSON con la suscripción de cada móvil |
+| `PUSH_SUBSCRIPTIONS` | Opcional: más móviles en formato JSON (normalmente `[]`) |
 
 ## Actualizar los datos
 
