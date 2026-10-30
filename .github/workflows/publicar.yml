@@ -25,7 +25,12 @@ jobs:
       - name: Preparar solo los archivos de la app
         run: |
           mkdir _site
-          cp index.html config.js logica.js cripto.js sw.js manifest.webmanifest datos.cifrados.json icon.svg icon-180.png icon-192.png icon-512.png badge.png _site/
+          cp index.html styles.css config.js logica.js cripto.js sw.js manifest.webmanifest datos.cifrados.json icon.svg icon-180.png icon-192.png icon-512.png badge.png _site/
+      - name: Comprobar estilos publicados
+        run: |
+          test -s _site/styles.css
+          test -s _site/index.html
+          grep -q 'href="styles.css"' _site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
       - id: deploy
