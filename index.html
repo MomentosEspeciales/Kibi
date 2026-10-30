@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -102,6 +102,12 @@
   if (!VISTAS.includes(view)) view = "hoy";
 
   // ---------- Agenda ----------
+  function plegadas() {
+    try {
+      const ids = JSON.parse(store.get("plegadas") || "[]");
+      return Array.isArray(ids) ? ids.filter(id => typeof id === "string") : [];
+    } catch (e) { return []; }
+  }
   function tarjeta(n, f) {
     const libre = L.sinCole(D, f), items = L.itemsDe(D, n.id, f);
     const estado = libre
@@ -113,11 +119,18 @@
           <div class="what"><b>${esc(i.titulo)}</b>${i.detalle ? `<p>${esc(i.detalle)}</p>` : ""}
           ${i.llevar ? `<span class="bring">${icon("i-bag")}${esc(i.llevar)}</span>` : ""}</div></li>`).join("")}</ul>`
       : `<p class="empty">${libre ? "Nada especial apuntado." : "Día normal, sin nada especial."}</p>`;
-    return `<article class="kid ${esc(n.id)}">
-      <div class="kid-head"><div class="avatar" aria-hidden="true"><svg><use href="#heart"/></svg><span>${esc(n.nombre[0])}</span></div>
-      <div><h3 class="kid-name">${esc(n.nombre)}</h3><div class="kid-meta">${esc(n.curso)}</div></div></div>
-      ${estado}${lista}</article>`;
+    return `<details class="kid ${esc(n.id)}" data-child="${esc(n.id)}"${plegadas().includes(n.id) ? "" : " open"}>
+      <summary class="kid-head"><div class="avatar" aria-hidden="true"><svg><use href="#heart"/></svg><span>${esc(n.nombre[0])}</span></div>
+      <div><h3 class="kid-name">${esc(n.nombre)}</h3><div class="kid-meta">${esc(n.curso)}</div></div></summary>
+      ${estado}${lista}</details>`;
   }
+  $("view").addEventListener("toggle", e => {
+    const card = e.target;
+    if (!card.matches("details.kid")) return;
+    const ids = plegadas().filter(id => id !== card.dataset.child);
+    if (!card.open) ids.push(card.dataset.child);
+    store.set("plegadas", JSON.stringify(ids));
+  }, true);
   function resumenDia(f) {
     const llevar = [];
     for (const n of D.ninos) for (const it of L.itemsDe(D, n.id, f)) {

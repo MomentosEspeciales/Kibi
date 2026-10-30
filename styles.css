@@ -57,11 +57,15 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .daytitle { font: 500 30px/1.3 var(--display); margin: 0; }
 .daytitle span { font: 600 17px var(--body); color: var(--muted); }
 .child-count, .count { font-size: 15px; font-weight: 800; border: 1px solid var(--line); padding: 5px 10px; border-radius: 9px; color: var(--muted); white-space: nowrap; }
-.kid { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow); border-top: 5px solid var(--tone); }
+.kid { align-self: start; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow); border-top: 5px solid var(--tone); }
 .daniel { --tone: var(--blue); --soft: var(--blue-soft); --tink: var(--blue-ink); }
 .laia { --tone: var(--pink); --soft: var(--pink-soft); --tink: var(--pink-ink); }
 .kid-head { position: relative; display: flex; gap: 16px; align-items: center; padding: 24px; margin-bottom: 20px; background: linear-gradient(125deg, var(--soft), var(--surface)); }
-.kid-head::after { content: ""; width: 24px; height: 24px; flex: none; background: var(--tone); clip-path: polygon(50% 0, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0 50%, 37% 37%); margin-left: auto; align-self: start; opacity: .65; }
+.kid-head::after { content: ""; width: 12px; height: 12px; flex: none; border-right: 2px solid var(--tink); border-bottom: 2px solid var(--tink); transform: rotate(45deg); margin-left: auto; align-self: center; }
+.kid[open] > .kid-head::after { transform: rotate(225deg); }
+.kid:not([open]) > .kid-head { margin-bottom: 0; }
+.kid > .kid-head:hover { background: var(--soft); border-radius: 0; }
+.kid > .kid-head:focus-visible { outline-offset: -5px; }
 .kid-head > div:last-child { min-width: 0; }
 .avatar { position: relative; width: 60px; height: 60px; display: grid; place-items: center; background: var(--surface); box-shadow: 0 4px 12px #354c4510; border: 1px solid var(--line); border-radius: 22px; flex: none; transform: rotate(-4deg); }
 .avatar svg { width: 22px; height: 22px; position: absolute; right: -5px; bottom: -5px; fill: var(--tone); stroke: var(--surface); stroke-width: 2; }
@@ -183,7 +187,6 @@ footer button { min-height: 44px; justify-self: center; background: transparent;
   .welcome h2 { font-size: 30px; }
   .family-art { display: none; }
   .kid-head { gap: 12px; }
-  .kid-head::after { display: none; }
   .kid-name { font-size: 27px; }
   .item { padding-block: 22px; }
   .notification-icon { display: none; }
