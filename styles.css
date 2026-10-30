@@ -207,3 +207,40 @@ footer button { min-height: 44px; justify-self: center; background: transparent;
   .art-house { background: #395548; color: #b4d4b3; } .art-heart { background: #684151; color: #ffd3df; } .art-sun { color: #edce91; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+
+/* Capture a family plan without squeezing the mobile reading layout. */
+.ingest { display: grid; gap: 14px; }
+.ingest .section-note, .ingest p { margin: 0; }
+.add-button { width: 100%; justify-self: stretch; font-size: 19px; min-height: 60px; }
+.local-note { color: var(--muted); font-size: 15px; line-height: 1.6; }
+#agenda-status:empty { display: none; }
+#agenda-status { color: var(--mint); font-size: 16px; overflow-wrap: anywhere; }
+.annotation-settings { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.annotation-settings > summary { font-weight: 800; flex-wrap: wrap; }
+.entries { list-style: none; margin: 0; padding: 0 20px; display: grid; }
+.entries > li { padding: 20px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.entries p { font-size: 16px; color: var(--muted); margin: 6px 0 !important; }
+.entry-actions, .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.backup-actions { padding: 0 20px 20px; }
+.annotation-settings > .local-note { padding: 0 20px 20px; }
+.file-label { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+.file-label input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.file-label:focus-within { outline: 3px solid var(--blue); outline-offset: 3px; }
+dialog { width: min(560px, calc(100% - 24px)); max-height: calc(100dvh - 32px); border: 1px solid var(--line); border-radius: 26px; padding: 26px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+dialog::backdrop { background: #172a38a6; }
+.entry-form { display: grid; gap: 22px; }
+.entry-form .section-head h2 { font-size: 28px; }
+.close-editor { border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: 28px; width: 48px; min-height: 48px; flex: none; }
+.entry-form label { display: grid; gap: 8px; font-weight: 800; font-size: 17px; }
+.entry-form input:not([type=checkbox]), .entry-form select, .entry-form textarea { width: 100%; min-width: 0; max-width: 100%; min-height: 54px; padding: 12px; border: 1px solid var(--muted); border-radius: 12px; background: var(--bg); color: var(--ink); font: 500 18px/1.5 var(--body); }
+.entry-form textarea { min-height: 110px; }
+.entry-form fieldset { min-width: 0; padding: 0; border: 0; margin: 0; }
+.entry-form legend { font-size: 17px; font-weight: 800; margin-bottom: 12px; }
+.choice-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.choice-list label, .entry-form .choice { display: flex; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; }
+.choice-list label { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.choice-list label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.entry-form input[type=checkbox] { width: 23px; height: 23px; accent-color: var(--accent); flex: none; }
+#entry-extra { display: grid; gap: 22px; }
+.entry-form .btn { justify-self: stretch; }
+@media(max-width: 380px) { dialog { padding: 20px; } .entry-form .section-head h2 { font-size: 25px; } }

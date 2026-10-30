@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -61,6 +61,18 @@
       <div><p class="eyebrow">LA VIDA EN FAMILIA, UN POCO MÁS FÁCIL</p><h2 id="welcome-title">Pequeños planes,<br>grandes días<span>.</span></h2><p>El día de los peques, de un vistazo.</p></div>
       <div class="family-art" aria-hidden="true"><span class="art-sun">☀</span><span class="art-heart">♥</span><span class="art-house">⌂</span><span class="art-spark">✦</span></div>
     </section>
+    <section class="ingest" aria-label="Añadir información">
+      <button type="button" class="btn add-button" id="nueva">＋ Añadir a la agenda</button>
+      <p class="section-note">Cumpleaños, tareas, extraescolares y planes del cole.</p>
+      <p class="local-note">Guardado cifrado en este móvil, sin sincronización ni avisos automáticos.</p>
+      <p id="agenda-status" role="status"></p>
+      <details class="annotation-settings">
+        <summary>Mis anotaciones <span id="entry-count" class="count"></span><span class="chevron" aria-hidden="true">⌄</span></summary>
+        <ul id="entries" class="entries"></ul>
+        <div class="backup-actions"><button class="btn ghost" type="button" id="exportar">Exportar copia cifrada</button><label class="btn ghost file-label">Importar copia cifrada<input type="file" id="importar" accept=".kibi,.json,application/json"></label></div>
+        <p class="local-note">La copia contiene tus anotaciones añadidas, no la agenda original del cole ni las tareas marcadas. Importa el archivo en otro móvil con el mismo código familiar. Guarda una copia antes de borrar los datos del navegador.</p>
+      </details>
+    </section>
     <nav class="switch" aria-label="Elegir día">
       <span class="thumb" id="thumb"></span>
       <button type="button" aria-pressed="true" data-view="hoy">Hoy</button>
@@ -83,12 +95,34 @@
   <footer id="foot"></footer>
 </div>
 
+<dialog id="editor" aria-labelledby="editor-title">
+  <form id="entry-form" class="entry-form">
+    <div class="section-head"><h2 id="editor-title">Añadir a la agenda</h2><button type="button" id="cerrar-editor" class="close-editor" aria-label="Cerrar formulario">×</button></div>
+    <label>¿Qué quieres añadir?<select id="entry-type"><option value="cumple">🎂 Cumpleaños</option><option value="tarea">✅ Tarea</option><option value="extra">🏊 Extraescolar</option><option value="evento">🎒 Evento o plan</option></select></label>
+    <fieldset><legend>¿Para quién?</legend><div id="entry-kids" class="choice-list"></div></fieldset>
+    <label><span id="entry-title-label">Nombre de quien cumple años</span><input id="entry-title" maxlength="160" required></label>
+    <label><span id="entry-date-label">Fecha</span><input type="date" id="entry-date" required></label>
+    <label id="entry-time-wrap">Hora (opcional)<input type="time" id="entry-time"></label>
+    <div id="entry-extra" hidden>
+      <fieldset><legend>¿Qué días se repite?</legend><div class="choice-list weekdays"><label><input type="checkbox" name="entry-day" value="1">Lunes</label><label><input type="checkbox" name="entry-day" value="2">Martes</label><label><input type="checkbox" name="entry-day" value="3">Miércoles</label><label><input type="checkbox" name="entry-day" value="4">Jueves</label><label><input type="checkbox" name="entry-day" value="5">Viernes</label><label><input type="checkbox" name="entry-day" value="6">Sábado</label><label><input type="checkbox" name="entry-day" value="0">Domingo</label></div></fieldset>
+      <label>Hasta (opcional)<input type="date" id="entry-until"></label>
+      <label class="choice"><input type="checkbox" id="entry-school">Solo los días con cole</label>
+    </div>
+    <label id="entry-annual-wrap" class="choice"><input type="checkbox" id="entry-annual" checked>Repetir cada año</label>
+    <label id="entry-place-wrap">Lugar (opcional)<input id="entry-place" maxlength="240"></label>
+    <label id="entry-bring-wrap">Qué hay que llevar (opcional)<input id="entry-bring" maxlength="500"></label>
+    <label>Notas (opcional)<textarea id="entry-notes" maxlength="2000" placeholder="Autorización, regalo, pago, recogida…"></textarea></label>
+    <p class="err" id="entry-error" role="alert" hidden></p>
+    <button type="submit" id="entry-save" class="btn">Guardar en este móvil</button>
+  </form>
+</dialog>
 <script src="config.js"></script>
-<script src="logica.js"></script>
+<script src="logica.js?v=7"></script>
 <script src="cripto.js"></script>
+<script src="agenda.js"></script>
 <script>
 (function () {
-  const L = window.Logica, C = window.Cripto;
+  const L = window.Logica, C = window.Cripto, A = window.Agenda;
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const icon = (id, cls) => `<svg${cls ? ` class="${cls}"` : ""} aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -98,6 +132,8 @@
     del(k) { try { localStorage.removeItem(k); } catch (e) {} }
   };
   const VISTAS = ["hoy", "manana", "semana"];
+  let baseD = null, entradas = [], codigoActual = "", errorPersonal = false, editando = null;
+  const PERSONAL_KEY = "kibi-agenda-personal-v1";
   let D = null, paquete = null, view = store.get("vista") || "hoy";
   if (!VISTAS.includes(view)) view = "hoy";
 
@@ -154,16 +190,17 @@
     }
     return html + `</div>`;
   }
+  const taskKey = t => t._personalId ? "personal:" + t._personalId : t.titulo;
   function hechas() { try { return JSON.parse(store.get("hechas") || "[]"); } catch (e) { return []; } }
   function pintarTareas(hoy) {
     const focused = document.activeElement;
     const focusKey = focused?.matches("#tasks input") ? focused.dataset.key : null;
     const done = hechas(), hoyF = L.iso(hoy);
     const ts = [...D.tareas].sort((a, b) => (a.limite || "9999").localeCompare(b.limite || "9999"));
-    const pendientes = ts.filter(t => !done.includes(t.titulo)).length;
+    const pendientes = ts.filter(t => !done.includes(taskKey(t))).length;
     $("task-count").textContent = pendientes ? `${pendientes} pendiente${pendientes === 1 ? "" : "s"}` : "Todo listo ✓";
     $("tasks").innerHTML = ts.length ? ts.map((t, i) => {
-      const ok = done.includes(t.titulo);
+      const ok = done.includes(taskKey(t));
       let due = "";
       if (t.limite) {
         const dias = Math.round((L.parse(t.limite) - L.parse(hoyF)) / 864e5);
@@ -173,7 +210,7 @@
       const dots = `<span class="quien">${t.ninos.map(id => `<span class="dot ${esc(id)}"></span>`).join("")}</span>`;
       const quien = t.ninos.map(id => esc((D.ninos.find(n => n.id === id) || {}).nombre || id)).join(" y ");
       return `<li><label class="task${ok ? " done" : ""}" for="t${i}">
-        <input type="checkbox" id="t${i}" data-key="${esc(t.titulo)}" ${ok ? "checked" : ""}>
+        <input type="checkbox" id="t${i}" data-key="${esc(taskKey(t))}" ${ok ? "checked" : ""}>
         <span class="check">${icon("i-check")}</span>
         <span class="what"><b>${esc(t.titulo)}</b><p>${dots}${quien}${t.detalle ? " · " + esc(t.detalle) : ""}</p></span>${due}</label></li>`;
     }).join("") : `<li class="tasks-empty">No hay tareas pendientes. ¡A disfrutar del día!</li>`;
@@ -191,7 +228,7 @@
     $("thumb").style.transform = `translateX(${VISTAS.indexOf(view) * 100}%)`;
     $("view").innerHTML = view === "hoy" ? vistaDia(L.iso(hoy), "Hoy")
       : view === "manana" ? vistaDia(L.iso(L.addDays(hoy, 1)), "Mañana") : vistaSemana(hoy);
-    pintarTareas(hoy);
+    pintarTareas(hoy); pintarEntradas();
     $("foot").innerHTML = `<span>${esc(D.colegio)} · datos del ${L.corto(D.actualizado)}</span><div class="footer-actions"><button type="button" id="actualizar">Actualizar KiBi</button><button type="button" id="salir">Cambiar código en este móvil</button></div><span id="update-status" role="status"></span>`;
     $("actualizar").onclick = async () => {
       const button = $("actualizar");
@@ -210,6 +247,108 @@
     $("salir").onclick = () => { store.del("codigo"); location.reload(); };
   }
   document.querySelectorAll(".switch button").forEach(b => b.addEventListener("click", () => { view = b.dataset.view; store.set("vista", view); pintar(); }));
+
+  // ---------- Anotaciones personales cifradas ----------
+  const nombresTipos = { cumple: "Cumpleaños", tarea: "Tarea", extra: "Extraescolar", evento: "Evento" };
+  function pintarEntradas() {
+    $("entry-count").textContent = entradas.length;
+    $("entries").innerHTML = entradas.length ? entradas.map(e => `<li><div><b>${esc(e.titulo)}</b><p>${nombresTipos[e.tipo]} · ${e.ninos.map(id => esc(baseD.ninos.find(n => n.id === id).nombre)).join(" y ")}</p><p>${e.fecha ? L.corto(e.fecha) : "Sin fecha límite"}${e.tipo === "extra" ? " · " + e.dias.map(d => L.DIAS[d]).join(", ") : e.anual ? " · Cada año" : ""}${e.hora ? " · " + esc(e.hora) : ""}</p></div><div class="entry-actions"><button type="button" class="btn ghost" data-edit="${esc(e.id)}" aria-label="Editar ${esc(e.titulo)}">Editar</button><button type="button" class="btn ghost" data-delete="${esc(e.id)}" aria-label="Eliminar ${esc(e.titulo)}">Eliminar</button></div></li>`).join("") : `<li class="tasks-empty">Aquí aparecerán los planes y tareas que añadas.</li>`;
+  }
+  function camposTipo() {
+    const tipo = $("entry-type").value;
+    $("entry-extra").hidden = tipo !== "extra";
+    $("entry-annual-wrap").hidden = tipo !== "cumple";
+    $("entry-time-wrap").hidden = tipo === "tarea";
+    $("entry-place-wrap").hidden = tipo === "tarea";
+    $("entry-bring-wrap").hidden = tipo === "tarea";
+    $("entry-title-label").textContent = tipo === "cumple" ? "Nombre de quien cumple años" : tipo === "extra" ? "Nombre de la actividad" : "¿Qué hay que hacer?";
+    $("entry-date-label").textContent = tipo === "tarea" ? "Fecha límite (opcional)" : tipo === "extra" ? "A partir de" : "Fecha";
+    $("entry-date").required = tipo !== "tarea";
+  }
+  function abrirEditor(id = null) {
+    editando = id;
+    const e = entradas.find(x => x.id === id);
+    $("entry-form").reset();
+    $("entry-error").hidden = true;
+    $("editor-title").textContent = e ? "Editar anotación" : "Añadir a la agenda";
+    $("entry-kids").innerHTML = baseD.ninos.map(n => `<label><input type="checkbox" name="entry-kid" value="${esc(n.id)}"${e?.ninos.includes(n.id) ? " checked" : ""}>${esc(n.nombre)}</label>`).join("");
+    $("entry-type").value = e?.tipo || "cumple";
+    $("entry-title").value = e?.titulo || "";
+    $("entry-date").value = e?.fecha ?? L.iso(new Date());
+    $("entry-time").value = e?.hora || "";
+    $("entry-until").value = e?.hasta || "";
+    $("entry-place").value = e?.lugar || "";
+    $("entry-bring").value = e?.llevar || "";
+    $("entry-notes").value = e?.detalle || "";
+    $("entry-annual").checked = e ? e.anual : true;
+    $("entry-school").checked = e?.soloConCole || false;
+    document.querySelectorAll('[name="entry-day"]').forEach(cb => { cb.checked = e?.dias.includes(Number(cb.value)) || false; });
+    camposTipo(); $("editor").showModal();
+  }
+  let escribiendo = false;
+  async function guardarEntradas(siguientes) {
+    if (escribiendo) throw Error("Espera a que termine el guardado anterior.");
+    if (errorPersonal) throw Error("Primero recupera las anotaciones cifradas de este móvil. No se sobrescribirán.");
+    const validas = A.validarLista(siguientes, baseD.ninos.map(n => n.id));
+    escribiendo = true;
+    try {
+    const cifrado = await C.cifrar({ formato: "kibi-anotaciones", version: 1, entradas: validas }, codigoActual);
+    // Unlike preference storage, a failed write must never be reported as saved.
+    localStorage.setItem(PERSONAL_KEY, JSON.stringify(cifrado));
+    entradas = validas; D = A.aplicar(baseD, entradas); pintar();
+    } finally { escribiendo = false; }
+  }
+  $("nueva").onclick = () => abrirEditor();
+  $("cerrar-editor").onclick = () => $("editor").close();
+  $("entry-type").onchange = camposTipo;
+  $("entry-form").onsubmit = async e => {
+    e.preventDefault();
+    $("entry-error").hidden = true; $("entry-save").disabled = true;
+    const tipo = $("entry-type").value;
+    const entrada = { id: editando || Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, "0")).join(""), tipo, titulo: $("entry-title").value, ninos: [...document.querySelectorAll('[name="entry-kid"]:checked')].map(cb => cb.value), fecha: $("entry-date").value, hora: tipo === "tarea" ? "" : $("entry-time").value, hasta: tipo === "extra" ? $("entry-until").value : "", lugar: tipo === "tarea" ? "" : $("entry-place").value, llevar: tipo === "tarea" ? "" : $("entry-bring").value, detalle: $("entry-notes").value, dias: [...document.querySelectorAll('[name="entry-day"]:checked')].map(cb => Number(cb.value)), anual: $("entry-annual").checked, soloConCole: $("entry-school").checked };
+    try {
+      await guardarEntradas([...entradas.filter(x => x.id !== entrada.id), entrada]);
+      $("editor").close(); $("agenda-status").textContent = "Guardado en este móvil. Puedes exportar una copia cifrada para llevarlo a otro.";
+    } catch (err) {
+      $("entry-error").textContent = "No se ha guardado: " + err.message;
+      $("entry-error").hidden = false;
+    } finally { $("entry-save").disabled = false; }
+  };
+  $("entries").onclick = async e => {
+    const editar = e.target.closest("button[data-edit]"), borrar = e.target.closest("button[data-delete]");
+    if (editar) { abrirEditor(editar.dataset.edit); return; }
+    if (!borrar) return;
+    const entrada = entradas.find(x => x.id === borrar.dataset.delete);
+    if (!entrada || !confirm(`¿Eliminar «${entrada.titulo}» de las anotaciones de este móvil?`)) return;
+    try { await guardarEntradas(entradas.filter(x => x.id !== entrada.id)); $("agenda-status").textContent = "Anotación eliminada de este móvil."; }
+    catch (err) { $("agenda-status").textContent = "No se pudo eliminar: " + err.message; }
+  };
+  $("exportar").onclick = () => {
+    const datos = store.get(PERSONAL_KEY);
+    if (!datos) { $("agenda-status").textContent = "Todavía no hay anotaciones personales para exportar."; return; }
+    const url = URL.createObjectURL(new Blob([datos], { type: "application/json" }));
+    const a = document.createElement("a"); a.href = url; a.download = `kibi-anotaciones-${L.iso(new Date())}.kibi`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    $("agenda-status").textContent = "Copia cifrada preparada. Para abrirla en otro móvil, usa Importar copia cifrada y el mismo código familiar.";
+  };
+  $("importar").onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      if (file.size > 2 * 1024 * 1024) throw Error("El archivo supera el tamaño permitido (2 MB).");
+      const copia = await C.descifrar(JSON.parse(await file.text()), codigoActual);
+      if (copia.formato !== "kibi-anotaciones" || copia.version !== 1) throw Error("No es una copia de anotaciones de KiBi compatible.");
+      const nuevas = A.validarLista(copia.entradas, baseD.ninos.map(n => n.id));
+      const actuales = new Map(entradas.map(x => [x.id, x]));
+      const cambios = nuevas.filter(x => actuales.has(x.id) && JSON.stringify(x) !== JSON.stringify(actuales.get(x.id))).length;
+      const altas = nuevas.filter(x => !actuales.has(x.id)).length;
+      if (!altas && !cambios) { $("agenda-status").textContent = "Estas anotaciones ya están en este móvil."; return; }
+      if (!confirm(`Se añadirán ${altas} anotaciones y se actualizarán ${cambios} existentes con la versión del archivo. Las demás se conservarán. ¿Importar?`)) return;
+      nuevas.forEach(x => actuales.set(x.id, x));
+      await guardarEntradas([...actuales.values()]);
+      $("agenda-status").textContent = `Copia importada: ${altas} nuevas y ${cambios} actualizadas.`;
+    } catch (err) { $("agenda-status").textContent = "No se ha importado la copia. Comprueba el archivo y que uses el mismo código familiar. " + err.message; }
+    finally { e.target.value = ""; }
+  };
 
   // ---------- Avisos push ----------
   const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -282,7 +421,20 @@
 
   // ---------- Arranque ----------
   async function abrir(codigo) {
-    D = await C.descifrar(paquete, codigo);
+    baseD = await C.descifrar(paquete, codigo);
+    codigoActual = codigo;
+    const guardadas = store.get(PERSONAL_KEY);
+    if (guardadas) {
+      try {
+        const copia = await C.descifrar(JSON.parse(guardadas), codigo);
+        if (copia.formato !== "kibi-anotaciones" || copia.version !== 1) throw Error("Formato desconocido");
+        entradas = A.validarLista(copia.entradas, baseD.ninos.map(n => n.id));
+      } catch (e) {
+        errorPersonal = true;
+        $("agenda-status").textContent = "No se han podido leer las anotaciones guardadas con este código. Se conservan intactas: exporta una copia antes de intentar recuperarlas.";
+      }
+    }
+    D = A.aplicar(baseD, entradas);
     store.set("codigo", codigo);
     $("lock").hidden = true; $("loading").hidden = true; $("app").hidden = false; $("skip-agenda").hidden = false;
     pintar(); pintarAvisos();

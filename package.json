@@ -6,7 +6,8 @@
     "cifrar": "node scripts/cifrar.mjs",
     "descifrar": "node scripts/descifrar.mjs",
     "avisar": "node scripts/avisar.mjs",
-    "test": "node scripts/probar.mjs"
+    "test": "node scripts/probar.mjs",
+    "test:agenda": "node --test tests/agenda.test.cjs"
   },
   "dependencies": {
     "web-push": "3.6.7"

@@ -53,3 +53,19 @@ Al hacer push a `main`, la app se publica sola. Para probar un aviso: pestaña A
 - `tareas`: cosas que hacer, con `limite` opcional.
 
 Fechas en formato `AAAA-MM-DD`.
+
+## Añadir información desde el móvil
+
+Pulsa **＋ Añadir a la agenda** para crear un cumpleaños (con repetición anual opcional), tarea (con o sin fecha límite), extraescolar (días de la semana, inicio, final opcional y opción de solo días con cole) o evento puntual. Se puede elegir uno o varios peques e indicar hora, lugar, notas y qué llevar.
+
+Las anotaciones se guardan **cifradas con el código familiar en el navegador de ese móvil**, separadas de la agenda original del repositorio. No se suben automáticamente ni forman parte de los avisos push de GitHub Actions. Borrar los datos del navegador elimina esta copia local.
+
+En **Mis anotaciones** se pueden editar y eliminar entradas, exportar una copia `.kibi` cifrada e importarla en otro móvil con el mismo código familiar. La importación muestra cuántas entradas añade o actualiza y solicita confirmación antes de sustituir versiones del mismo identificador; conserva las demás. No transporta los estados de tareas hechas ni elimina en otros móviles lo que se haya eliminado en el primero. Guarda copias antes de cambiar de código familiar: el nuevo código no descifra las anotaciones creadas con el anterior.
+
+La sincronización automática requiere un backend autenticado, todavía no configurado. El pegado inteligente de mensajes y la extracción de fotos/documentos tampoco forman parte de esta versión.
+
+Pruebas con datos sintéticos (sin necesitar los datos privados del cole):
+
+```bash
+npm run test:agenda
+```

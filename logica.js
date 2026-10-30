@@ -13,7 +13,7 @@
   const corto = s => { const d = parse(s); return d.getDate() + "/" + (d.getMonth() + 1); };
 
   function cubre(e, f) {
-    if (e.fecha) return e.fecha === f;
+    if (e.fecha) return e.anual ? f >= e.fecha && f.slice(5) === e.fecha.slice(5) : e.fecha === f;
     if (e.fechas) return e.fechas.includes(f);
     if (e.desde) return f >= e.desde && f <= e.hasta;
     return false;
