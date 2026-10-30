@@ -1,0 +1,42 @@
+name: Avisos diarios
+
+on:
+  schedule:
+    # 7:00 y 19:00 en Madrid. Se lanza a dos horas UTC para cubrir horario de invierno y de verano;
+    # el script solo envía cuando en Madrid son exactamente las 7 o las 19.
+    - cron: "0 5,6,17,18 * * *"
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "Qué día avisar"
+        type: choice
+        options: [hoy, manana]
+        default: manana
+      forzar:
+        description: "Enviar aunque no haya nada especial (para probar)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: avisos
+  cancel-in-progress: false
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --omit=dev
+      - name: Enviar aviso
+        run: node scripts/avisar.mjs
+        env:
+          MODO: ${{ github.event_name == 'workflow_dispatch' && inputs.modo || 'auto' }}
+          FORZAR: ${{ github.event_name == 'workflow_dispatch' && inputs.forzar && '1' || '0' }}
+          CODIGO_FAMILIAR: ${{ secrets.CODIGO_FAMILIAR }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}

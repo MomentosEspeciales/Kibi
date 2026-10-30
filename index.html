@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KiBi</title>
+<meta name="description" content="La agenda de Daniel y Laia Luna: qué tienen hoy y mañana">
+<meta name="theme-color" content="#fff6fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17142a" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="KiBi">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: one soft column — heart wordmark, pill day switcher, one rounded card per child in their own colour, tasks, alerts */
+:root {
+  --bg: #fff6fa;
+  --bg2: #f1f8ff;
+  --surface: #ffffff;
+  --ink: #2b2440;
+  --muted: #7a7192;
+  --line: #f0e6ef;
+  --pink: #f0528f;
+  --pink-soft: #ffe4ef;
+  --pink-ink: #c22a67;
+  --blue: #3593e8;
+  --blue-soft: #dfefff;
+  --blue-ink: #1868b8;
+  --sun: #a35d00;
+  --sun-soft: #fff0d6;
+  --mint: #23845a;
+  --mint-soft: #ddf5e9;
+  --shadow: 0 1px 2px rgba(80, 40, 90, .06), 0 8px 24px rgba(80, 40, 90, .08);
+  --display: "Fredoka", "Avenir Next Rounded", "Nunito", system-ui, sans-serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17142a; --bg2: #131a2c; --surface: #221d3a; --ink: #f6f1ff; --muted: #b0a7c8; --line: #332c52;
+    --pink: #ff7cad; --pink-soft: #3d2140; --pink-ink: #ffa6c8;
+    --blue: #6cb6ff; --blue-soft: #1c2e4d; --blue-ink: #a6d3ff;
+    --sun: #ffc56b; --sun-soft: #3b2e19; --mint: #74dcaa; --mint-soft: #173a2c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 28px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; min-height: 100%; background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%); }
+body {
+  margin: 0; min-height: 100%; color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; font-weight: 500;
+  background: transparent;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: calc(18px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+}
+body::before, body::after { content: ""; position: fixed; z-index: -1; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(60px); opacity: .55; pointer-events: none; }
+body::before { background: var(--pink-soft); top: -30vmax; left: -25vmax; }
+body::after { background: var(--blue-soft); top: -25vmax; right: -30vmax; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, label:focus-within { outline: 3px solid var(--blue); outline-offset: 2px; }
+.wrap { max-width: 540px; margin: 0 auto; display: grid; gap: 20px; }
+
+/* Cabecera */
+header { display: flex; align-items: center; gap: 14px; }
+.logo { display: flex; align-items: center; gap: 8px; }
+.logo h1 { font-family: var(--display); font-weight: 700; font-size: 40px; line-height: 1; margin: 0; letter-spacing: -.01em; }
+.logo h1 .k { color: var(--pink); } .logo h1 .b { color: var(--blue); }
+.hearts { position: relative; width: 38px; height: 30px; flex: none; }
+.hearts svg { position: absolute; width: 24px; height: 24px; }
+.hearts .h1 { left: 0; top: 0; fill: var(--pink); transform: rotate(-12deg); }
+.hearts .h2 { right: 0; bottom: 0; fill: var(--blue); transform: rotate(10deg); }
+.fecha { margin-left: auto; text-align: right; font-size: 14px; color: var(--muted); font-weight: 700; line-height: 1.25; }
+.fecha b { display: block; color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 17px; }
+
+/* Selector de día */
+.switch { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-radius: 999px; padding: 5px; box-shadow: var(--shadow); }
+.switch .thumb { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%); transition: transform .3s cubic-bezier(.3, 1.3, .5, 1); }
+.switch button { position: relative; z-index: 1; border: 0; background: none; padding: 11px 6px; border-radius: 999px; font-family: var(--display); font-weight: 600; font-size: 16px; color: var(--muted); cursor: pointer; transition: color .2s; }
+.switch button[aria-pressed="true"] { color: #fff; }
+
+.daytitle { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; }
+.daytitle span { color: var(--muted); font-weight: 500; }
+
+/* Tarjeta de cada niño */
+.kids { display: grid; gap: 16px; }
+.kid { background: var(--surface); border-radius: 28px; box-shadow: var(--shadow); overflow: hidden; }
+.kid.daniel { --tone: var(--blue); --soft: var(--blue-soft); --tink: var(--blue-ink); }
+.kid.laia { --tone: var(--pink); --soft: var(--pink-soft); --tink: var(--pink-ink); }
+.kid-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 12px; }
+.avatar { position: relative; width: 52px; height: 52px; flex: none; display: grid; place-items: center; }
+.avatar svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--tone); }
+.avatar span { position: relative; font-family: var(--display); font-weight: 700; font-size: 20px; color: #fff; margin-top: -3px; }
+.kid-name { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; line-height: 1.1; }
+.kid-meta { font-size: 14px; color: var(--muted); font-weight: 700; }
+.estado { display: flex; align-items: center; gap: 8px; margin: 0 18px; padding: 10px 14px; border-radius: 16px; background: var(--soft); color: var(--tink); font-weight: 800; font-size: 14px; }
+.estado.libre { background: var(--mint-soft); color: var(--mint); }
+.estado svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.items { list-style: none; margin: 0; padding: 8px 18px 18px; display: grid; gap: 4px; }
+.item { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 10px 0; }
+.item + .item { border-top: 1px dashed var(--line); }
+.time { align-self: start; justify-self: start; font-variant-numeric: tabular-nums; font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--tink); background: var(--soft); padding: 3px 9px; border-radius: 10px; }
+.time.dia { font-size: 12px; padding: 4px 8px; }
+.what { min-width: 0; }
+.what b { display: block; font-weight: 800; font-size: 16px; }
+.what p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.bring { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 13px; font-weight: 800; background: var(--sun-soft); color: var(--sun); padding: 5px 11px 5px 9px; border-radius: 999px; transform: rotate(-1deg); }
+.bring svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.empty { padding: 14px 18px 18px; color: var(--muted); margin: 0; font-weight: 700; }
+
+/* Secciones */
+section h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 4px 2px 10px; display: flex; align-items: center; gap: 8px; }
+section h2 svg { width: 20px; height: 20px; fill: none; stroke: var(--pink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.task { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 14px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; cursor: pointer; }
+.task input { position: absolute; opacity: 0; pointer-events: none; }
+.check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; margin-top: 1px; transition: all .2s; }
+.check svg { width: 15px; height: 15px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.task.done .check { background: linear-gradient(135deg, var(--pink), var(--blue)); border-color: transparent; }
+.task.done .check svg { opacity: 1; }
+.task.done .what b { text-decoration: line-through; color: var(--muted); }
+.quien { display: inline-flex; gap: 4px; vertical-align: middle; margin-right: 4px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot.daniel { background: var(--blue); } .dot.laia { background: var(--pink); }
+.due { font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap; background: var(--bg); padding: 4px 9px; border-radius: 999px; }
+.due.soon { color: var(--pink-ink); background: var(--pink-soft); }
+
+/* Semana */
+.week { display: grid; gap: 10px; }
+.wday { background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 14px 16px; display: grid; grid-template-columns: 54px 1fr; gap: 14px; align-items: start; }
+.wdate { text-align: center; border-radius: 16px; padding: 6px 0; background: var(--bg); line-height: 1; }
+.wday.today .wdate { background: linear-gradient(135deg, var(--pink), var(--blue)); color: #fff; }
+.wdate b { display: block; font-family: var(--display); font-size: 24px; font-weight: 700; margin-top: 3px; }
+.wdate span { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; opacity: .8; }
+.wlist { display: grid; gap: 6px; min-width: 0; font-size: 14px; font-weight: 700; padding-top: 3px; }
+.row { display: flex; gap: 8px; align-items: baseline; }
+.row .dot { flex: none; transform: translateY(-1px); }
+.off { color: var(--mint); font-weight: 800; }
+.quiet { color: var(--muted); }
+
+/* Paneles */
+.panel { background: var(--surface); border-radius: 24px; box-shadow: var(--shadow); padding: 18px; display: grid; gap: 12px; }
+.panel p { margin: 0; }
+.btn { border: 0; border-radius: 999px; padding: 13px 20px; font-family: var(--display); font-weight: 600; font-size: 16px; cursor: pointer; background: linear-gradient(135deg, var(--pink), var(--blue)); color: #fff; justify-self: start; box-shadow: 0 6px 16px rgba(240, 82, 143, .25); }
+.btn.ghost { background: var(--blue-soft); color: var(--blue-ink); box-shadow: none; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.note { font-size: 14px; color: var(--muted); }
+.ok { color: var(--mint); font-weight: 800; }
+.err { color: var(--pink-ink); font-weight: 800; }
+textarea { width: 100%; min-height: 90px; font: 12px ui-monospace, Menlo, monospace; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); padding: 10px; }
+
+/* Pantalla del código */
+.lock { text-align: center; justify-items: center; padding: 28px 22px; gap: 14px; }
+.lock .big-hearts { position: relative; width: 84px; height: 64px; }
+.lock .big-hearts svg { position: absolute; width: 52px; height: 52px; }
+.lock .big-hearts .h1 { left: 0; top: 0; fill: var(--pink); transform: rotate(-12deg); }
+.lock .big-hearts .h2 { right: 0; bottom: 0; fill: var(--blue); transform: rotate(10deg); }
+.lock h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 0; }
+.lock label { font-weight: 800; justify-self: stretch; text-align: left; }
+.lock input { font: inherit; font-size: 18px; padding: 14px 16px; border-radius: 16px; border: 2px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+.lock .btn { justify-self: stretch; }
+.loading { text-align: center; color: var(--muted); font-weight: 700; margin: 30px 0; }
+
+footer { color: var(--muted); font-size: 13px; text-align: center; display: grid; gap: 6px; font-weight: 700; }
+footer button { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) {
+  .kid, .wday, .task { animation: pop .4s cubic-bezier(.3, 1.3, .5, 1) both; }
+  .kid:nth-child(3) { animation-delay: .06s; }
+  @keyframes pop { from { transform: translateY(8px) scale(.98); opacity: .5; } }
+}
+@media (prefers-reduced-motion: reduce) { .switch .thumb { transition: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="heart" viewBox="0 0 24 24"><path d="M12 21.2c-.3 0-.6-.1-.8-.3C6.1 16.6 2 13.1 2 8.6 2 5.5 4.4 3 7.4 3c1.8 0 3.5.9 4.6 2.4C13.1 3.9 14.8 3 16.6 3 19.6 3 22 5.5 22 8.6c0 4.5-4.1 8-9.2 12.3-.2.2-.5.3-.8.3z"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></symbol>
+    <symbol id="i-school" viewBox="0 0 24 24"><path d="M3 10l9-5 9 5-9 5-9-5z"/><path d="M7 12v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="hearts" aria-hidden="true"><svg class="h1"><use href="#heart"/></svg><svg class="h2"><use href="#heart"/></svg></div>
+      <h1><span class="k">Ki</span><span class="b">Bi</span></h1>
+    </div>
+    <div class="fecha" id="fecha"></div>
+  </header>
+
+  <form class="lock panel" id="lock" hidden>
+    <div class="big-hearts" aria-hidden="true"><svg class="h1"><use href="#heart"/></svg><svg class="h2"><use href="#heart"/></svg></div>
+    <h2>Hola, familia</h2>
+    <p class="note">Escribe el código familiar para ver la agenda de Daniel y Laia Luna. Solo se pide la primera vez en cada móvil.</p>
+    <label for="codigo">Código familiar</label>
+    <input id="codigo" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required>
+    <p class="err" id="lock-err" hidden>Ese código no es correcto. Prueba otra vez.</p>
+    <button class="btn" type="submit">Entrar</button>
+  </form>
+
+  <div id="app" class="wrap" hidden>
+    <nav class="switch" aria-label="Elegir día">
+      <span class="thumb" id="thumb"></span>
+      <button type="button" aria-pressed="true" data-view="hoy">Hoy</button>
+      <button type="button" aria-pressed="false" data-view="manana">Mañana</button>
+      <button type="button" aria-pressed="false" data-view="semana">Semana</button>
+    </nav>
+    <main id="view" class="kids" aria-live="polite"></main>
+    <section>
+      <h2><svg><use href="#i-list"/></svg>Pendiente</h2>
+      <ul class="tasks" id="tasks"></ul>
+    </section>
+    <section>
+      <h2><svg><use href="#i-bell"/></svg>Avisos en el móvil</h2>
+      <div class="panel" id="avisos"></div>
+    </section>
+  </div>
+
+  <p class="loading" id="loading">Cargando…</p>
+  <footer id="foot"></footer>
+</div>
+
+<script src="config.js"></script>
+<script src="logica.js"></script>
+<script src="cripto.js"></script>
+<script>
+(function () {
+  const L = window.Logica, C = window.Cripto;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const icon = (id, cls) => `<svg${cls ? ` class="${cls}"` : ""} aria-hidden="true"><use href="#${id}"/></svg>`;
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+  const VISTAS = ["hoy", "manana", "semana"];
+  let D = null, paquete = null, view = store.get("vista") || "hoy";
+  if (!VISTAS.includes(view)) view = "hoy";
+
+  // ---------- Agenda ----------
+  function tarjeta(n, f) {
+    const libre = L.sinCole(D, f), items = L.itemsDe(D, n.id, f);
+    const estado = libre
+      ? `<div class="estado libre">${icon("i-sun")}Sin cole · ${esc(libre)}</div>`
+      : `<div class="estado">${icon("i-school")}Cole · ${esc(L.horario(D, f))}</div>`;
+    const lista = items.length
+      ? `<ul class="items">${items.map(i => `<li class="item">
+          <span class="time${i.hora ? "" : " dia"}">${esc(i.hora) || "Todo el día"}</span>
+          <div class="what"><b>${esc(i.titulo)}</b>${i.detalle ? `<p>${esc(i.detalle)}</p>` : ""}
+          ${i.llevar ? `<span class="bring">${icon("i-bag")}${esc(i.llevar)}</span>` : ""}</div></li>`).join("")}</ul>`
+      : `<p class="empty">${libre ? "Nada especial apuntado." : "Día normal, sin nada especial."}</p>`;
+    return `<article class="kid ${esc(n.id)}">
+      <div class="kid-head"><div class="avatar" aria-hidden="true"><svg><use href="#heart"/></svg><span>${esc(n.nombre[0])}</span></div>
+      <div><p class="kid-name">${esc(n.nombre)}</p><div class="kid-meta">${esc(n.curso)}</div></div></div>
+      ${estado}${lista}</article>`;
+  }
+  function vistaDia(f, etiqueta) {
+    const d = L.parse(f);
+    return `<p class="daytitle">${etiqueta} <span>· ${L.DIAS[d.getDay()]} ${d.getDate()}</span></p>` + D.ninos.map(n => tarjeta(n, f)).join("");
+  }
+  function vistaSemana(hoy) {
+    let html = `<div class="week">`;
+    for (let i = 0; i < 7; i++) {
+      const d = L.addDays(hoy, i), f = L.iso(d), libre = L.sinCole(D, f), filas = [];
+      if (libre && libre !== "Fin de semana") filas.push(`<div class="row off">Sin cole · ${esc(libre)}</div>`);
+      for (const n of D.ninos) for (const it of L.itemsDe(D, n.id, f))
+        filas.push(`<div class="row"><span class="dot ${esc(n.id)}" title="${esc(n.nombre)}"></span><span>${it.hora ? esc(it.hora) + " · " : ""}${esc(it.titulo)}</span></div>`);
+      if (!filas.length) filas.push(`<div class="row quiet">${libre ? "Fin de semana" : "Día normal"}</div>`);
+      html += `<div class="wday${i === 0 ? " today" : ""}"><div class="wdate"><span>${L.DIAS[d.getDay()].slice(0, 3)}</span><b>${d.getDate()}</b></div><div class="wlist">${filas.join("")}</div></div>`;
+    }
+    return html + `</div>`;
+  }
+  function hechas() { try { return JSON.parse(store.get("hechas") || "[]"); } catch (e) { return []; } }
+  function pintarTareas(hoy) {
+    const done = hechas(), hoyF = L.iso(hoy);
+    const ts = [...D.tareas].sort((a, b) => (a.limite || "9999").localeCompare(b.limite || "9999"));
+    $("tasks").innerHTML = ts.map((t, i) => {
+      const ok = done.includes(t.titulo);
+      let due = "";
+      if (t.limite) {
+        const dias = Math.round((L.parse(t.limite) - L.parse(hoyF)) / 864e5);
+        const txt = dias < 0 ? "Vencida" : dias === 0 ? "Hoy" : dias === 1 ? "Mañana" : "Hasta " + L.corto(t.limite);
+        due = `<span class="due${dias <= 7 ? " soon" : ""}">${txt}</span>`;
+      }
+      const dots = `<span class="quien">${t.ninos.map(id => `<span class="dot ${esc(id)}"></span>`).join("")}</span>`;
+      const quien = t.ninos.map(id => esc((D.ninos.find(n => n.id === id) || {}).nombre || id)).join(" y ");
+      return `<li><label class="task${ok ? " done" : ""}" for="t${i}">
+        <input type="checkbox" id="t${i}" data-key="${esc(t.titulo)}" ${ok ? "checked" : ""}>
+        <span class="check">${icon("i-check")}</span>
+        <span class="what"><b>${esc(t.titulo)}</b><p>${dots}${quien}${t.detalle ? " · " + esc(t.detalle) : ""}</p></span>${due}</label></li>`;
+    }).join("");
+    document.querySelectorAll("#tasks input").forEach(cb => cb.addEventListener("change", () => {
+      const a = hechas().filter(k => k !== cb.dataset.key);
+      if (cb.checked) a.push(cb.dataset.key);
+      store.set("hechas", JSON.stringify(a)); pintarTareas(hoy);
+    }));
+  }
+  function pintar() {
+    const hoy = new Date();
+    $("fecha").innerHTML = `<b>${L.DIAS[hoy.getDay()].replace(/^./, c => c.toUpperCase())} ${hoy.getDate()}</b>${L.MESES[hoy.getMonth()]}`;
+    document.querySelectorAll(".switch button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
+    $("thumb").style.transform = `translateX(${VISTAS.indexOf(view) * 100}%)`;
+    $("view").innerHTML = view === "hoy" ? vistaDia(L.iso(hoy), "Hoy")
+      : view === "manana" ? vistaDia(L.iso(L.addDays(hoy, 1)), "Mañana") : vistaSemana(hoy);
+    pintarTareas(hoy);
+    $("foot").innerHTML = `<span>${esc(D.colegio)} · datos del ${L.corto(D.actualizado)}</span><button type="button" id="salir">Cambiar código en este móvil</button>`;
+    $("salir").onclick = () => { store.del("codigo"); location.reload(); };
+  }
+  document.querySelectorAll(".switch button").forEach(b => b.addEventListener("click", () => { view = b.dataset.view; store.set("vista", view); pintar(); }));
+
+  // ---------- Avisos push ----------
+  const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const soportaPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  let promptInstalar = null;
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); promptInstalar = e; if (D) pintarAvisos(); });
+
+  function claveAplicacion() {
+    const b64 = self.VAPID_PUBLIC_KEY.replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(b64 + "=".repeat((4 - b64.length % 4) % 4));
+    return Uint8Array.from(raw, c => c.charCodeAt(0));
+  }
+  async function suscripcionActual() {
+    if (!soportaPush) return null;
+    const reg = await navigator.serviceWorker.ready;
+    return reg.pushManager.getSubscription();
+  }
+  async function pintarAvisos() {
+    const box = $("avisos");
+    if (esIOS && !standalone()) {
+      box.innerHTML = `<p><b>En iPhone, los avisos solo funcionan con KiBi instalada.</b></p>
+        <p class="note">Abre esta página en Safari, toca Compartir y elige «Añadir a pantalla de inicio». Después abre KiBi desde el icono y vuelve aquí.</p>`;
+      return;
+    }
+    if (!soportaPush) { box.innerHTML = `<p>Este navegador no admite avisos. Usa Chrome en Android o Safari en iPhone con la app instalada.</p>`; return; }
+    let html = "";
+    if (!standalone()) {
+      html += promptInstalar
+        ? `<p>Instala KiBi para tenerla en la pantalla de inicio.</p><button class="btn ghost" type="button" id="instalar">Instalar KiBi</button>`
+        : `<p class="note">Consejo: en el menú del navegador, elige «Instalar app» o «Añadir a pantalla de inicio».</p>`;
+    }
+    const sub = await suscripcionActual();
+    if (Notification.permission === "denied") {
+      html += `<p class="err">Los avisos están bloqueados para KiBi.</p><p class="note">Actívalos en los ajustes de notificaciones del móvil y vuelve a abrir la app.</p>`;
+    } else if (sub) {
+      html += `<p class="ok">Avisos activados en este móvil.</p>
+        <p class="note">Llegará un resumen a las 7:00 con lo de hoy y a las 19:00 con lo de mañana, solo los días que haya algo.</p>
+        <p class="note">Si aún no lo has hecho, envía este código del móvil a quien gestiona KiBi (solo una vez):</p>
+        <textarea id="subtxt" readonly>${esc(JSON.stringify(sub))}</textarea>
+        <div class="btns"><button class="btn ghost" type="button" id="copiar">Copiar código</button><button class="btn ghost" type="button" id="probar">Probar un aviso</button></div>
+        <p class="note" id="copiado" aria-live="polite"></p>`;
+    } else {
+      html += `<p>Recibe un aviso a las 7:00 con lo de hoy y a las 19:00 con lo de mañana.</p><button class="btn" type="button" id="activar">Activar avisos</button><p class="err" id="aviso-err" hidden></p>`;
+    }
+    box.innerHTML = html;
+    if ($("instalar")) $("instalar").onclick = async () => { promptInstalar.prompt(); await promptInstalar.userChoice; promptInstalar = null; pintarAvisos(); };
+    if ($("activar")) $("activar").onclick = activar;
+    if ($("copiar")) $("copiar").onclick = async () => {
+      try { await navigator.clipboard.writeText($("subtxt").value); $("copiado").textContent = "Copiado. Pégalo en un mensaje."; }
+      catch (e) { $("subtxt").select(); $("copiado").textContent = "Selecciona el texto y cópialo."; }
+    };
+    if ($("probar")) $("probar").onclick = async () => {
+      const reg = await navigator.serviceWorker.ready;
+      const r = L.resumenAviso(D, L.iso(new Date()), "hoy");
+      reg.showNotification(r ? "KiBi · " + r.titulo : "KiBi", { body: r ? r.cuerpo : "Así se verán los avisos.", icon: "icon-192.png", badge: "badge.png", tag: "prueba" });
+    };
+  }
+  async function activar() {
+    try {
+      const permiso = await Notification.requestPermission();
+      if (permiso !== "granted") { pintarAvisos(); return; }
+      const reg = await navigator.serviceWorker.ready;
+      await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveAplicacion() });
+      pintarAvisos();
+    } catch (e) {
+      const el = $("aviso-err"); el.hidden = false; el.textContent = "No se han podido activar los avisos: " + e.message;
+    }
+  }
+
+  // ---------- Arranque ----------
+  async function abrir(codigo) {
+    D = await C.descifrar(paquete, codigo);
+    store.set("codigo", codigo);
+    $("lock").hidden = true; $("loading").hidden = true; $("app").hidden = false;
+    pintar(); pintarAvisos();
+  }
+  $("lock").addEventListener("submit", async e => {
+    e.preventDefault();
+    $("lock-err").hidden = true;
+    try { await abrir($("codigo").value); } catch (err) { $("lock-err").hidden = false; }
+  });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && D) pintar(); });
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+  fetch("datos.cifrados.json", { cache: "no-store" })
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(async p => {
+      paquete = p;
+      const guardado = store.get("codigo");
+      if (guardado) { try { await abrir(guardado); return; } catch (e) { store.del("codigo"); } }
+      $("loading").hidden = true; $("lock").hidden = false; $("codigo").focus();
+    })
+    .catch(() => { $("loading").textContent = "No se han podido cargar los datos. Comprueba la conexión y vuelve a abrir KiBi."; });
+})();
+</script>
+</body>
+</html>

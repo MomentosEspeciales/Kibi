@@ -1,0 +1,44 @@
+// Envía el aviso del día a los móviles suscritos. Lo ejecuta GitHub Actions.
+// Variables: CODIGO_FAMILIAR, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, PUSH_SUBSCRIPTIONS (lista JSON),
+// MODO = auto | hoy | manana, FORZAR = 1 para enviar aunque no sea la hora.
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const Logica = require("../logica.js");
+const { descifrar } = require("../cripto.js");
+const webpush = require("web-push");
+
+const env = process.env;
+const ahora = new Date();
+const partes = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(ahora).map(p => [p.type, p.value]));
+const hoyMadrid = `${partes.year}-${partes.month}-${partes.day}`;
+const horaMadrid = Number(partes.hour);
+
+let modo = env.MODO || "auto";
+if (modo === "auto") {
+  if (horaMadrid === 7) modo = "hoy";
+  else if (horaMadrid === 19) modo = "manana";
+  else { console.log(`Son las ${horaMadrid}h en Madrid: no toca enviar.`); process.exit(0); }
+}
+
+const D = await descifrar(JSON.parse(readFileSync("datos.cifrados.json", "utf8")), env.CODIGO_FAMILIAR);
+const fecha = modo === "hoy" ? hoyMadrid : Logica.iso(Logica.addDays(Logica.parse(hoyMadrid), 1));
+const aviso = Logica.resumenAviso(D, fecha, modo === "hoy" ? "hoy" : "manana");
+if (!aviso && env.FORZAR !== "1") { console.log(`Nada especial el ${fecha}: no se envía aviso.`); process.exit(0); }
+const mensaje = aviso || { titulo: "Prueba", cuerpo: "Los avisos funcionan en este móvil." };
+
+const subs = JSON.parse(env.PUSH_SUBSCRIPTIONS || "[]");
+if (!subs.length) { console.log("No hay móviles suscritos todavía."); process.exit(0); }
+webpush.setVapidDetails("mailto:gabiarno@gmail.com", env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+
+let ok = 0;
+for (const s of subs) {
+  try {
+    await webpush.sendNotification(s, JSON.stringify({ title: "KiBi · " + mensaje.titulo, body: mensaje.cuerpo, tag: "kibi-" + fecha, url: "./" }), { TTL: 6 * 3600, urgency: "normal" });
+    ok++;
+  } catch (e) {
+    console.error(`Fallo al enviar a un móvil (${e.statusCode || "?"}): ${e.statusCode === 404 || e.statusCode === 410 ? "esta suscripción ya no existe, quítala de PUSH_SUBSCRIPTIONS" : e.body || e.message}`);
+  }
+}
+console.log(`Aviso «${mensaje.titulo}» enviado a ${ok} de ${subs.length} móviles.`);
+if (!ok) process.exit(1);

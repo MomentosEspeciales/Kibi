@@ -1,0 +1,14 @@
+{
+  "name": "kibi",
+  "private": true,
+  "description": "KiBi: la agenda de Daniel y Laia Luna, con avisos push",
+  "scripts": {
+    "cifrar": "node scripts/cifrar.mjs",
+    "descifrar": "node scripts/descifrar.mjs",
+    "avisar": "node scripts/avisar.mjs",
+    "test": "node scripts/probar.mjs"
+  },
+  "dependencies": {
+    "web-push": "3.6.7"
+  }
+}
