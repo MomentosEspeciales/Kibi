@@ -149,6 +149,7 @@ textarea { width: 100%; min-height: 90px; font: 12px ui-monospace, monospace; bo
 .loading { text-align: center; color: var(--muted); margin: 40px 0; }
 footer { display: grid; gap: 6px; text-align: center; color: var(--muted); font-size: 15px; padding: 8px 0; }
 footer button { min-height: 44px; justify-self: center; background: transparent; border: 0; color: var(--muted); text-decoration: underline; font-size: 16px; }
+.footer-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 20px; }
 @media (hover: hover) { .btn:hover { filter: brightness(.93); } .task:hover { border-color: #a9b8ae; } summary:hover { background: var(--accent-soft); border-radius: 18px; } }
 /* Mobile keeps the same reading sizes; content grows vertically instead of shrinking. */
 @media (max-width: 760px) {

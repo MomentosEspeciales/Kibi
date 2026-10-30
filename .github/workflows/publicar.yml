@@ -30,7 +30,7 @@ jobs:
         run: |
           test -s _site/styles.css
           test -s _site/index.html
-          grep -q 'href="styles.css"' _site/index.html
+          grep -Eq 'href="styles[.]css([?][^"]*)?"' _site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
       - id: deploy

@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -179,7 +179,21 @@
     $("view").innerHTML = view === "hoy" ? vistaDia(L.iso(hoy), "Hoy")
       : view === "manana" ? vistaDia(L.iso(L.addDays(hoy, 1)), "Mañana") : vistaSemana(hoy);
     pintarTareas(hoy);
-    $("foot").innerHTML = `<span>${esc(D.colegio)} · datos del ${L.corto(D.actualizado)}</span><button type="button" id="salir">Cambiar código en este móvil</button>`;
+    $("foot").innerHTML = `<span>${esc(D.colegio)} · datos del ${L.corto(D.actualizado)}</span><div class="footer-actions"><button type="button" id="actualizar">Actualizar KiBi</button><button type="button" id="salir">Cambiar código en este móvil</button></div><span id="update-status" role="status"></span>`;
+    $("actualizar").onclick = async () => {
+      const button = $("actualizar");
+      button.disabled = true; button.textContent = "Buscando actualización…";
+      try {
+        if ("serviceWorker" in navigator) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg) await reg.update();
+        }
+        location.reload();
+      } catch (e) {
+        button.disabled = false; button.textContent = "Actualizar KiBi";
+        $("update-status").textContent = "No se pudo comprobar la actualización. Revisa la conexión y prueba otra vez.";
+      }
+    };
     $("salir").onclick = () => { store.del("codigo"); location.reload(); };
   }
   document.querySelectorAll(".switch button").forEach(b => b.addEventListener("click", () => { view = b.dataset.view; store.set("vista", view); pintar(); }));
@@ -269,7 +283,14 @@
     finally { button.disabled = false; button.innerHTML = `Abrir nuestra agenda <span aria-hidden="true">→</span>`; }
   });
   document.addEventListener("visibilitychange", () => { if (!document.hidden && D) pintar(); });
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    const teniaControlador = Boolean(navigator.serviceWorker.controller);
+    let recargando = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (teniaControlador && !recargando) { recargando = true; location.reload(); }
+    });
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
+  }
 
   fetch("datos.cifrados.json", { cache: "no-store" })
     .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
