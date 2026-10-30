@@ -1,6 +1,6 @@
 // Service worker: muestra los avisos push y permite abrir la app sin conexión.
-const CACHE = "kibi-v1";
-const FILES = ["./", "index.html", "config.js", "logica.js", "cripto.js", "datos.cifrados.json", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "badge.png"];
+const CACHE = "kibi-v2";
+const FILES = ["./", "index.html", "styles.css", "config.js", "logica.js", "cripto.js", "datos.cifrados.json", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "badge.png"];
 
 self.addEventListener("install", e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener("activate", e => e.waitUntil(

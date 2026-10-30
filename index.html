@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>KiBi</title>
 <meta name="description" content="La agenda de Daniel y Laia Luna: qué tienen hoy y mañana">
-<meta name="theme-color" content="#fff6fa" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17142a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#faf8f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191e2b" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex, nofollow">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -18,167 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
-<style>
-/* Layout: one soft column — heart wordmark, pill day switcher, one rounded card per child in their own colour, tasks, alerts */
-:root {
-  --bg: #fff6fa;
-  --bg2: #f1f8ff;
-  --surface: #ffffff;
-  --ink: #2b2440;
-  --muted: #7a7192;
-  --line: #f0e6ef;
-  --pink: #f0528f;
-  --pink-soft: #ffe4ef;
-  --pink-ink: #c22a67;
-  --blue: #3593e8;
-  --blue-soft: #dfefff;
-  --blue-ink: #1868b8;
-  --sun: #a35d00;
-  --sun-soft: #fff0d6;
-  --mint: #23845a;
-  --mint-soft: #ddf5e9;
-  --shadow: 0 1px 2px rgba(80, 40, 90, .06), 0 8px 24px rgba(80, 40, 90, .08);
-  --display: "Fredoka", "Avenir Next Rounded", "Nunito", system-ui, sans-serif;
-  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17142a; --bg2: #131a2c; --surface: #221d3a; --ink: #f6f1ff; --muted: #b0a7c8; --line: #332c52;
-    --pink: #ff7cad; --pink-soft: #3d2140; --pink-ink: #ffa6c8;
-    --blue: #6cb6ff; --blue-soft: #1c2e4d; --blue-ink: #a6d3ff;
-    --sun: #ffc56b; --sun-soft: #3b2e19; --mint: #74dcaa; --mint-soft: #173a2c;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 28px rgba(0, 0, 0, .25);
-    color-scheme: dark;
-  }
-}
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; min-height: 100%; background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%); }
-body {
-  margin: 0; min-height: 100%; color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; font-weight: 500;
-  background: transparent;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-top: calc(18px + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(44px + env(safe-area-inset-bottom, 0px));
-}
-body::before, body::after { content: ""; position: fixed; z-index: -1; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(60px); opacity: .55; pointer-events: none; }
-body::before { background: var(--pink-soft); top: -30vmax; left: -25vmax; }
-body::after { background: var(--blue-soft); top: -25vmax; right: -30vmax; }
-[hidden] { display: none !important; }
-button { font: inherit; color: inherit; }
-button:focus-visible, input:focus-visible, label:focus-within { outline: 3px solid var(--blue); outline-offset: 2px; }
-.wrap { max-width: 540px; margin: 0 auto; display: grid; gap: 20px; }
-
-/* Cabecera */
-header { display: flex; align-items: center; gap: 14px; }
-.logo { display: flex; align-items: center; gap: 8px; }
-.logo h1 { font-family: var(--display); font-weight: 700; font-size: 40px; line-height: 1; margin: 0; letter-spacing: -.01em; }
-.logo h1 .k { color: var(--pink); } .logo h1 .b { color: var(--blue); }
-.hearts { position: relative; width: 38px; height: 30px; flex: none; }
-.hearts svg { position: absolute; width: 24px; height: 24px; }
-.hearts .h1 { left: 0; top: 0; fill: var(--pink); transform: rotate(-12deg); }
-.hearts .h2 { right: 0; bottom: 0; fill: var(--blue); transform: rotate(10deg); }
-.fecha { margin-left: auto; text-align: right; font-size: 14px; color: var(--muted); font-weight: 700; line-height: 1.25; }
-.fecha b { display: block; color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 17px; }
-
-/* Selector de día */
-.switch { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-radius: 999px; padding: 5px; box-shadow: var(--shadow); }
-.switch .thumb { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%); transition: transform .3s cubic-bezier(.3, 1.3, .5, 1); }
-.switch button { position: relative; z-index: 1; border: 0; background: none; padding: 11px 6px; border-radius: 999px; font-family: var(--display); font-weight: 600; font-size: 16px; color: var(--muted); cursor: pointer; transition: color .2s; }
-.switch button[aria-pressed="true"] { color: #fff; }
-
-.daytitle { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; }
-.daytitle span { color: var(--muted); font-weight: 500; }
-
-/* Tarjeta de cada niño */
-.kids { display: grid; gap: 16px; }
-.kid { background: var(--surface); border-radius: 28px; box-shadow: var(--shadow); overflow: hidden; }
-.kid.daniel { --tone: var(--blue); --soft: var(--blue-soft); --tink: var(--blue-ink); }
-.kid.laia { --tone: var(--pink); --soft: var(--pink-soft); --tink: var(--pink-ink); }
-.kid-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 12px; }
-.avatar { position: relative; width: 52px; height: 52px; flex: none; display: grid; place-items: center; }
-.avatar svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--tone); }
-.avatar span { position: relative; font-family: var(--display); font-weight: 700; font-size: 20px; color: #fff; margin-top: -3px; }
-.kid-name { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; line-height: 1.1; }
-.kid-meta { font-size: 14px; color: var(--muted); font-weight: 700; }
-.estado { display: flex; align-items: center; gap: 8px; margin: 0 18px; padding: 10px 14px; border-radius: 16px; background: var(--soft); color: var(--tink); font-weight: 800; font-size: 14px; }
-.estado.libre { background: var(--mint-soft); color: var(--mint); }
-.estado svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.items { list-style: none; margin: 0; padding: 8px 18px 18px; display: grid; gap: 4px; }
-.item { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 10px 0; }
-.item + .item { border-top: 1px dashed var(--line); }
-.time { align-self: start; justify-self: start; font-variant-numeric: tabular-nums; font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--tink); background: var(--soft); padding: 3px 9px; border-radius: 10px; }
-.time.dia { font-size: 12px; padding: 4px 8px; }
-.what { min-width: 0; }
-.what b { display: block; font-weight: 800; font-size: 16px; }
-.what p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
-.bring { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 13px; font-weight: 800; background: var(--sun-soft); color: var(--sun); padding: 5px 11px 5px 9px; border-radius: 999px; transform: rotate(-1deg); }
-.bring svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.empty { padding: 14px 18px 18px; color: var(--muted); margin: 0; font-weight: 700; }
-
-/* Secciones */
-section h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 4px 2px 10px; display: flex; align-items: center; gap: 8px; }
-section h2 svg { width: 20px; height: 20px; fill: none; stroke: var(--pink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.task { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 14px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; cursor: pointer; }
-.task input { position: absolute; opacity: 0; pointer-events: none; }
-.check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; margin-top: 1px; transition: all .2s; }
-.check svg { width: 15px; height: 15px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
-.task.done .check { background: linear-gradient(135deg, var(--pink), var(--blue)); border-color: transparent; }
-.task.done .check svg { opacity: 1; }
-.task.done .what b { text-decoration: line-through; color: var(--muted); }
-.quien { display: inline-flex; gap: 4px; vertical-align: middle; margin-right: 4px; }
-.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.dot.daniel { background: var(--blue); } .dot.laia { background: var(--pink); }
-.due { font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap; background: var(--bg); padding: 4px 9px; border-radius: 999px; }
-.due.soon { color: var(--pink-ink); background: var(--pink-soft); }
-
-/* Semana */
-.week { display: grid; gap: 10px; }
-.wday { background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 14px 16px; display: grid; grid-template-columns: 54px 1fr; gap: 14px; align-items: start; }
-.wdate { text-align: center; border-radius: 16px; padding: 6px 0; background: var(--bg); line-height: 1; }
-.wday.today .wdate { background: linear-gradient(135deg, var(--pink), var(--blue)); color: #fff; }
-.wdate b { display: block; font-family: var(--display); font-size: 24px; font-weight: 700; margin-top: 3px; }
-.wdate span { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; opacity: .8; }
-.wlist { display: grid; gap: 6px; min-width: 0; font-size: 14px; font-weight: 700; padding-top: 3px; }
-.row { display: flex; gap: 8px; align-items: baseline; }
-.row .dot { flex: none; transform: translateY(-1px); }
-.off { color: var(--mint); font-weight: 800; }
-.quiet { color: var(--muted); }
-
-/* Paneles */
-.panel { background: var(--surface); border-radius: 24px; box-shadow: var(--shadow); padding: 18px; display: grid; gap: 12px; }
-.panel p { margin: 0; }
-.btn { border: 0; border-radius: 999px; padding: 13px 20px; font-family: var(--display); font-weight: 600; font-size: 16px; cursor: pointer; background: linear-gradient(135deg, var(--pink), var(--blue)); color: #fff; justify-self: start; box-shadow: 0 6px 16px rgba(240, 82, 143, .25); }
-.btn.ghost { background: var(--blue-soft); color: var(--blue-ink); box-shadow: none; }
-.btns { display: flex; flex-wrap: wrap; gap: 8px; }
-.note { font-size: 14px; color: var(--muted); }
-.ok { color: var(--mint); font-weight: 800; }
-.err { color: var(--pink-ink); font-weight: 800; }
-textarea { width: 100%; min-height: 90px; font: 12px ui-monospace, Menlo, monospace; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); padding: 10px; }
-
-/* Pantalla del código */
-.lock { text-align: center; justify-items: center; padding: 28px 22px; gap: 14px; }
-.lock .big-hearts { position: relative; width: 84px; height: 64px; }
-.lock .big-hearts svg { position: absolute; width: 52px; height: 52px; }
-.lock .big-hearts .h1 { left: 0; top: 0; fill: var(--pink); transform: rotate(-12deg); }
-.lock .big-hearts .h2 { right: 0; bottom: 0; fill: var(--blue); transform: rotate(10deg); }
-.lock h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 0; }
-.lock label { font-weight: 800; justify-self: stretch; text-align: left; }
-.lock input { font: inherit; font-size: 18px; padding: 14px 16px; border-radius: 16px; border: 2px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
-.lock .btn { justify-self: stretch; }
-.loading { text-align: center; color: var(--muted); font-weight: 700; margin: 30px 0; }
-
-footer { color: var(--muted); font-size: 13px; text-align: center; display: grid; gap: 6px; font-weight: 700; }
-footer button { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 13px; }
-@media (prefers-reduced-motion: no-preference) {
-  .kid, .wday, .task { animation: pop .4s cubic-bezier(.3, 1.3, .5, 1) both; }
-  .kid:nth-child(3) { animation-delay: .06s; }
-  @keyframes pop { from { transform: translateY(8px) scale(.98); opacity: .5; } }
-}
-@media (prefers-reduced-motion: reduce) { .switch .thumb { transition: none; } }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -193,41 +33,50 @@ footer button { background: none; border: 0; color: var(--muted); text-decoratio
   </defs>
 </svg>
 
+<a class="skip" id="skip-agenda" href="#view" hidden>Ir a la agenda</a>
 <div class="wrap">
   <header>
     <div class="logo">
       <div class="hearts" aria-hidden="true"><svg class="h1"><use href="#heart"/></svg><svg class="h2"><use href="#heart"/></svg></div>
       <h1><span class="k">Ki</span><span class="b">Bi</span></h1>
+      <span class="brand-note">Un poquito de orden.<br>Mucho de familia.</span>
     </div>
     <div class="fecha" id="fecha"></div>
   </header>
 
   <form class="lock panel" id="lock" hidden>
     <div class="big-hearts" aria-hidden="true"><svg class="h1"><use href="#heart"/></svg><svg class="h2"><use href="#heart"/></svg></div>
-    <h2>Hola, familia</h2>
-    <p class="note">Escribe el código familiar para ver la agenda de Daniel y Laia Luna. Solo se pide la primera vez en cada móvil.</p>
+    <span class="eyebrow">VUESTRO RINCÓN FAMILIAR</span>
+    <h2>Hola, familia <span aria-hidden="true">☀</span></h2>
+    <p class="note">Escribe el código familiar para ver la agenda de Daniel y Laia Luna. Tu agenda, las mochilas y los pendientes, en un mismo lugar.</p>
     <label for="codigo">Código familiar</label>
-    <input id="codigo" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required>
-    <p class="err" id="lock-err" hidden>Ese código no es correcto. Prueba otra vez.</p>
-    <button class="btn" type="submit">Entrar</button>
+    <input id="codigo" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" aria-describedby="lock-err" required>
+    <p class="err" id="lock-err" role="alert" hidden>Ese código no es correcto. Prueba otra vez.</p>
+    <button class="btn" type="submit">Abrir nuestra agenda <span aria-hidden="true">→</span></button>
+    <p class="lock-privacy">Datos cifrados · Acceso con vuestro código familiar</p>
   </form>
 
   <div id="app" class="wrap" hidden>
+    <section class="welcome" aria-labelledby="welcome-title">
+      <div><p class="eyebrow">LA VIDA EN FAMILIA, UN POCO MÁS FÁCIL</p><h2 id="welcome-title">Pequeños planes,<br>grandes días<span>.</span></h2><p>El día de los peques, de un vistazo.</p></div>
+      <div class="family-art" aria-hidden="true"><span class="art-sun">☀</span><span class="art-heart">♥</span><span class="art-house">⌂</span><span class="art-spark">✦</span></div>
+    </section>
     <nav class="switch" aria-label="Elegir día">
       <span class="thumb" id="thumb"></span>
       <button type="button" aria-pressed="true" data-view="hoy">Hoy</button>
       <button type="button" aria-pressed="false" data-view="manana">Mañana</button>
       <button type="button" aria-pressed="false" data-view="semana">Semana</button>
     </nav>
-    <main id="view" class="kids" aria-live="polite"></main>
-    <section>
-      <h2><svg><use href="#i-list"/></svg>Pendiente</h2>
+    <main id="view" class="kids" tabindex="-1" aria-live="polite"></main>
+    <section class="task-section" aria-labelledby="tasks-title">
+      <div class="section-head"><h2 id="tasks-title"><svg aria-hidden="true"><use href="#i-list"/></svg>Por preparar</h2><span class="count" id="task-count" aria-live="polite"></span></div>
+      <p class="section-note">Una cosa menos en la cabeza. Marca lo que ya está listo.</p>
       <ul class="tasks" id="tasks"></ul>
     </section>
-    <section>
-      <h2><svg><use href="#i-bell"/></svg>Avisos en el móvil</h2>
+    <details class="notification-settings">
+      <summary><span class="notification-icon" aria-hidden="true"><svg><use href="#i-bell"/></svg></span><span><b>Que KiBi te lo recuerde</b><small>Avisos y ajustes de este móvil</small></span><span class="chevron" aria-hidden="true">⌄</span></summary>
       <div class="panel" id="avisos"></div>
-    </section>
+    </details>
   </div>
 
   <p class="loading" id="loading">Cargando…</p>
@@ -266,20 +115,27 @@ footer button { background: none; border: 0; color: var(--muted); text-decoratio
       : `<p class="empty">${libre ? "Nada especial apuntado." : "Día normal, sin nada especial."}</p>`;
     return `<article class="kid ${esc(n.id)}">
       <div class="kid-head"><div class="avatar" aria-hidden="true"><svg><use href="#heart"/></svg><span>${esc(n.nombre[0])}</span></div>
-      <div><p class="kid-name">${esc(n.nombre)}</p><div class="kid-meta">${esc(n.curso)}</div></div></div>
+      <div><h3 class="kid-name">${esc(n.nombre)}</h3><div class="kid-meta">${esc(n.curso)}</div></div></div>
       ${estado}${lista}</article>`;
+  }
+  function resumenDia(f) {
+    const llevar = [];
+    for (const n of D.ninos) for (const it of L.itemsDe(D, n.id, f)) {
+      if (it.llevar) llevar.push(`<li><b>${esc(n.nombre)}</b><span>${esc(it.llevar)}</span></li>`);
+    }
+    return llevar.length ? `<aside class="packing" aria-label="Qué hay que llevar">${icon("i-bag")}<div><h3>Antes de salir de casa</h3><ul>${llevar.join("")}</ul></div></aside>` : "";
   }
   function vistaDia(f, etiqueta) {
     const d = L.parse(f);
-    return `<p class="daytitle">${etiqueta} <span>· ${L.DIAS[d.getDay()]} ${d.getDate()}</span></p>` + D.ninos.map(n => tarjeta(n, f)).join("");
+    return `<div class="agenda-heading"><div><p class="eyebrow">NUESTRA AGENDA</p><h2 class="daytitle">${etiqueta} <span>· ${L.DIAS[d.getDay()]} ${d.getDate()}</span></h2></div><span class="child-count">${D.ninos.length} peques</span></div>` + resumenDia(f) + D.ninos.map(n => tarjeta(n, f)).join("");
   }
   function vistaSemana(hoy) {
-    let html = `<div class="week">`;
+    let html = `<div class="agenda-heading"><div><p class="eyebrow">PARA ORGANIZARNOS</p><h2 class="daytitle">Los próximos 7 días</h2></div></div><div class="week">`;
     for (let i = 0; i < 7; i++) {
       const d = L.addDays(hoy, i), f = L.iso(d), libre = L.sinCole(D, f), filas = [];
       if (libre && libre !== "Fin de semana") filas.push(`<div class="row off">Sin cole · ${esc(libre)}</div>`);
       for (const n of D.ninos) for (const it of L.itemsDe(D, n.id, f))
-        filas.push(`<div class="row"><span class="dot ${esc(n.id)}" title="${esc(n.nombre)}"></span><span>${it.hora ? esc(it.hora) + " · " : ""}${esc(it.titulo)}</span></div>`);
+        filas.push(`<div class="row"><span class="week-child ${esc(n.id)}">${esc(n.nombre)}</span><span>${it.hora ? esc(it.hora) + " · " : ""}${esc(it.titulo)}</span></div>`);
       if (!filas.length) filas.push(`<div class="row quiet">${libre ? "Fin de semana" : "Día normal"}</div>`);
       html += `<div class="wday${i === 0 ? " today" : ""}"><div class="wdate"><span>${L.DIAS[d.getDay()].slice(0, 3)}</span><b>${d.getDate()}</b></div><div class="wlist">${filas.join("")}</div></div>`;
     }
@@ -287,9 +143,13 @@ footer button { background: none; border: 0; color: var(--muted); text-decoratio
   }
   function hechas() { try { return JSON.parse(store.get("hechas") || "[]"); } catch (e) { return []; } }
   function pintarTareas(hoy) {
+    const focused = document.activeElement;
+    const focusKey = focused?.matches("#tasks input") ? focused.dataset.key : null;
     const done = hechas(), hoyF = L.iso(hoy);
     const ts = [...D.tareas].sort((a, b) => (a.limite || "9999").localeCompare(b.limite || "9999"));
-    $("tasks").innerHTML = ts.map((t, i) => {
+    const pendientes = ts.filter(t => !done.includes(t.titulo)).length;
+    $("task-count").textContent = pendientes ? `${pendientes} pendiente${pendientes === 1 ? "" : "s"}` : "Todo listo ✓";
+    $("tasks").innerHTML = ts.length ? ts.map((t, i) => {
       const ok = done.includes(t.titulo);
       let due = "";
       if (t.limite) {
@@ -303,7 +163,8 @@ footer button { background: none; border: 0; color: var(--muted); text-decoratio
         <input type="checkbox" id="t${i}" data-key="${esc(t.titulo)}" ${ok ? "checked" : ""}>
         <span class="check">${icon("i-check")}</span>
         <span class="what"><b>${esc(t.titulo)}</b><p>${dots}${quien}${t.detalle ? " · " + esc(t.detalle) : ""}</p></span>${due}</label></li>`;
-    }).join("");
+    }).join("") : `<li class="tasks-empty">No hay tareas pendientes. ¡A disfrutar del día!</li>`;
+    if (focusKey !== null) [...document.querySelectorAll("#tasks input")].find(cb => cb.dataset.key === focusKey)?.focus();
     document.querySelectorAll("#tasks input").forEach(cb => cb.addEventListener("change", () => {
       const a = hechas().filter(k => k !== cb.dataset.key);
       if (cb.checked) a.push(cb.dataset.key);
@@ -396,13 +257,16 @@ footer button { background: none; border: 0; color: var(--muted); text-decoratio
   async function abrir(codigo) {
     D = await C.descifrar(paquete, codigo);
     store.set("codigo", codigo);
-    $("lock").hidden = true; $("loading").hidden = true; $("app").hidden = false;
+    $("lock").hidden = true; $("loading").hidden = true; $("app").hidden = false; $("skip-agenda").hidden = false;
     pintar(); pintarAvisos();
   }
   $("lock").addEventListener("submit", async e => {
     e.preventDefault();
     $("lock-err").hidden = true;
-    try { await abrir($("codigo").value); } catch (err) { $("lock-err").hidden = false; }
+    const button = $("lock").querySelector("button[type=submit]");
+    button.disabled = true; button.textContent = "Abriendo vuestra agenda…";
+    try { await abrir($("codigo").value); } catch (err) { $("lock-err").hidden = false; $("codigo").focus(); }
+    finally { button.disabled = false; button.innerHTML = `Abrir nuestra agenda <span aria-hidden="true">→</span>`; }
   });
   document.addEventListener("visibilitychange", () => { if (!document.hidden && D) pintar(); });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
