@@ -5,6 +5,13 @@
 })(typeof self !== "undefined" ? self : this, function () {
   const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
   const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  // Colores disponibles para los peques. Si un niño no trae `color`, se reparte por orden.
+  const TONOS = ["azul", "rosa", "verde", "naranja", "lila"];
+  function tono(D, id) {
+    const i = D.ninos.findIndex(n => n.id === id);
+    const n = D.ninos[i];
+    return n && TONOS.includes(n.color) ? n.color : TONOS[Math.max(i, 0) % TONOS.length];
+  }
 
   const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
@@ -40,11 +47,11 @@
       if (s.desde && f < s.desde) continue;
       if (s.hasta && f > s.hasta) continue;
       if (s.soloConCole && libre) continue;
-      out.push({ hora: s.hora || "", titulo: s.titulo, detalle: s.detalle || "", llevar: s.llevar || "" });
+      out.push({ hora: s.hora || "", titulo: s.titulo, detalle: s.detalle || "", llevar: s.llevar || "", duda: s.duda || "" });
     }
     for (const e of D.eventos) {
       if (!e.ninos.includes(nino) || !cubre(e, f)) continue;
-      out.push({ hora: e.hora || "", titulo: e.titulo, detalle: e.detalle || "", llevar: e.llevar || "" });
+      out.push({ hora: e.hora || "", titulo: e.titulo, detalle: e.detalle || "", llevar: e.llevar || "", duda: e.duda || "" });
     }
     return out.sort((a, b) => (a.hora || "99").localeCompare(b.hora || "99"));
   }
@@ -54,7 +61,9 @@
   }
 
   // Texto corto para una notificación. Devuelve null si ese día no hay nada que avisar.
-  function resumenAviso(D, f, cuando) {
+  // Con { privado: true } solo muestra la inicial de cada peque (se ve en la pantalla de bloqueo).
+  function resumenAviso(D, f, cuando, opciones) {
+    const privado = !!(opciones && opciones.privado);
     const lineas = [];
     const libre = sinCole(D, f);
     if (libre && libre !== "Fin de semana" && libre !== "Fuera del curso escolar") lineas.push("Sin cole: " + libre);
@@ -66,7 +75,7 @@
       for (const it of itemsDe(D, n.id, f)) {
         const k = it.titulo + "|" + it.hora;
         if (!grupos.has(k)) grupos.set(k, { it, nombres: [] });
-        grupos.get(k).nombres.push(n.nombre);
+        grupos.get(k).nombres.push(privado ? n.nombre.charAt(0).toUpperCase() + "." : n.nombre);
       }
     }
     for (const { it, nombres } of grupos.values()) {
@@ -80,5 +89,5 @@
     return { titulo, cuerpo: lineas.join("\n") };
   }
 
-  return { DIAS, MESES, iso, parse, addDays, largo, corto, cubre, sinCole, horario, itemsDe, tareasQueVencen, resumenAviso };
+  return { DIAS, MESES, TONOS, tono, iso, parse, addDays, largo, corto, cubre, sinCole, horario, itemsDe, tareasQueVencen, resumenAviso };
 });

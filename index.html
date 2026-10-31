@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>KiBi</title>
-<meta name="description" content="La agenda de Daniel y Laia Luna: qué tienen hoy y mañana">
+<meta name="description" content="La agenda de tus peques: qué tienen hoy y mañana">
 <meta name="theme-color" content="#faf8f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#191e2b" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex, nofollow">
@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="styles.css?v=7">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -48,7 +48,7 @@
     <div class="big-hearts" aria-hidden="true"><svg class="h1"><use href="#heart"/></svg><svg class="h2"><use href="#heart"/></svg></div>
     <span class="eyebrow">VUESTRO RINCÓN FAMILIAR</span>
     <h2>Hola, familia <span aria-hidden="true">☀</span></h2>
-    <p class="note">Escribe el código familiar para ver la agenda de Daniel y Laia Luna. Tu agenda, las mochilas y los pendientes, en un mismo lugar.</p>
+    <p class="note">Escribe el código familiar para ver la agenda de vuestros peques. Tu agenda, las mochilas y los pendientes, en un mismo lugar.</p>
     <label for="codigo">Código familiar</label>
     <input id="codigo" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" aria-describedby="lock-err" required>
     <p class="err" id="lock-err" role="alert" hidden>Ese código no es correcto. Prueba otra vez.</p>
@@ -117,7 +117,7 @@
   </form>
 </dialog>
 <script src="config.js"></script>
-<script src="logica.js?v=7"></script>
+<script src="logica.js?v=8"></script>
 <script src="cripto.js"></script>
 <script src="agenda.js"></script>
 <script>
@@ -144,6 +144,8 @@
       return Array.isArray(ids) ? ids.filter(id => typeof id === "string") : [];
     } catch (e) { return []; }
   }
+  // Marca lo que llegó con una duda (por ejemplo, una fecha que no cuadra con el día de la semana).
+  const duda = x => x.duda ? `<span class="duda"><span aria-hidden="true">⚠️</span>Por confirmar: ${esc(x.duda)}</span>` : "";
   function tarjeta(n, f) {
     const libre = L.sinCole(D, f), items = L.itemsDe(D, n.id, f);
     const estado = libre
@@ -153,9 +155,9 @@
       ? `<ul class="items">${items.map(i => `<li class="item">
           <span class="time${i.hora ? "" : " dia"}">${esc(i.hora) || "Todo el día"}</span>
           <div class="what"><b>${esc(i.titulo)}</b>${i.detalle ? `<p>${esc(i.detalle)}</p>` : ""}
-          ${i.llevar ? `<span class="bring">${icon("i-bag")}${esc(i.llevar)}</span>` : ""}</div></li>`).join("")}</ul>`
+          ${i.llevar ? `<span class="bring">${icon("i-bag")}${esc(i.llevar)}</span>` : ""}${duda(i)}</div></li>`).join("")}</ul>`
       : `<p class="empty">${libre ? "Nada especial apuntado." : "Día normal, sin nada especial."}</p>`;
-    return `<details class="kid ${esc(n.id)}" data-child="${esc(n.id)}"${plegadas().includes(n.id) ? "" : " open"}>
+    return `<details class="kid tono-${L.tono(D, n.id)}" data-child="${esc(n.id)}"${plegadas().includes(n.id) ? "" : " open"}>
       <summary class="kid-head"><div class="avatar" aria-hidden="true"><svg><use href="#heart"/></svg><span>${esc(n.nombre[0])}</span></div>
       <div><h3 class="kid-name">${esc(n.nombre)}</h3><div class="kid-meta">${esc(n.curso)}</div></div></summary>
       ${estado}${lista}</details>`;
@@ -184,7 +186,7 @@
       const d = L.addDays(hoy, i), f = L.iso(d), libre = L.sinCole(D, f), filas = [];
       if (libre && libre !== "Fin de semana") filas.push(`<div class="row off">Sin cole · ${esc(libre)}</div>`);
       for (const n of D.ninos) for (const it of L.itemsDe(D, n.id, f))
-        filas.push(`<div class="row"><span class="week-child ${esc(n.id)}">${esc(n.nombre)}</span><span>${it.hora ? esc(it.hora) + " · " : ""}${esc(it.titulo)}</span></div>`);
+        filas.push(`<div class="row"><span class="week-child tono-${L.tono(D, n.id)}">${esc(n.nombre)}</span><span>${it.hora ? esc(it.hora) + " · " : ""}${esc(it.titulo)}${it.duda ? ' <span title="' + esc(it.duda) + '">⚠️</span>' : ""}</span></div>`);
       if (!filas.length) filas.push(`<div class="row quiet">${libre ? "Fin de semana" : "Día normal"}</div>`);
       html += `<div class="wday${i === 0 ? " today" : ""}"><div class="wdate"><span>${L.DIAS[d.getDay()].slice(0, 3)}</span><b>${d.getDate()}</b></div><div class="wlist">${filas.join("")}</div></div>`;
     }
@@ -207,12 +209,12 @@
         const txt = dias < 0 ? "Vencida" : dias === 0 ? "Hoy" : dias === 1 ? "Mañana" : "Hasta " + L.corto(t.limite);
         due = `<span class="due${dias <= 7 ? " soon" : ""}">${txt}</span>`;
       }
-      const dots = `<span class="quien">${t.ninos.map(id => `<span class="dot ${esc(id)}"></span>`).join("")}</span>`;
+      const dots = `<span class="quien">${t.ninos.map(id => `<span class="dot tono-${L.tono(D, id)}"></span>`).join("")}</span>`;
       const quien = t.ninos.map(id => esc((D.ninos.find(n => n.id === id) || {}).nombre || id)).join(" y ");
       return `<li><label class="task${ok ? " done" : ""}" for="t${i}">
         <input type="checkbox" id="t${i}" data-key="${esc(taskKey(t))}" ${ok ? "checked" : ""}>
         <span class="check">${icon("i-check")}</span>
-        <span class="what"><b>${esc(t.titulo)}</b><p>${dots}${quien}${t.detalle ? " · " + esc(t.detalle) : ""}</p></span>${due}</label></li>`;
+        <span class="what"><b>${esc(t.titulo)}</b><p>${dots}${quien}${t.detalle ? " · " + esc(t.detalle) : ""}</p>${duda(t)}</span>${due}</label></li>`;
     }).join("") : `<li class="tasks-empty">No hay tareas pendientes. ¡A disfrutar del día!</li>`;
     if (focusKey !== null) [...document.querySelectorAll("#tasks input")].find(cb => cb.dataset.key === focusKey)?.focus();
     document.querySelectorAll("#tasks input").forEach(cb => cb.addEventListener("change", () => {

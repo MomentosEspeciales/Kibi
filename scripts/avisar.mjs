@@ -1,7 +1,10 @@
 // Envía el aviso del día a los móviles suscritos. Lo ejecuta GitHub Actions.
 // Variables: CODIGO_FAMILIAR, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, PUSH_SUBSCRIPTIONS (lista JSON),
 // MODO = auto | hoy | manana, FORZAR = 1 para enviar aunque no sea la hora.
-import { readFileSync, existsSync } from "node:fs";
+// Opcionales: VAPID_SUBJECT (mailto: o URL de contacto), AVISOS_PRIVADOS = 1 para mostrar solo iniciales.
+// Con --clave solo escribe qué aviso tocaría ahora (p. ej. «2026-11-04-manana») en GITHUB_OUTPUT,
+// para que el workflow no envíe dos veces el mismo aviso aunque el cron se retrase o se repita.
+import { readFileSync, existsSync, appendFileSync } from "node:fs";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const Logica = require("../logica.js");
@@ -18,14 +21,24 @@ let modo = env.MODO || "auto";
 const esPrueba = modo === "prueba";
 if (esPrueba) modo = "manana";
 if (modo === "auto") {
-  if (horaMadrid === 7) modo = "hoy";
-  else if (horaMadrid === 19) modo = "manana";
-  else { console.log(`Son las ${horaMadrid}h en Madrid: no toca enviar.`); process.exit(0); }
+  // El cron de GitHub puede llegar tarde: se acepta hasta una hora de retraso (7–8 h y 19–20 h).
+  // El workflow guarda qué avisos ya se enviaron, así que no se repiten.
+  if (horaMadrid === 7 || horaMadrid === 8) modo = "hoy";
+  else if (horaMadrid === 19 || horaMadrid === 20) modo = "manana";
+  else modo = null;
 }
+const fechaAviso = modo && (modo === "hoy" ? hoyMadrid : Logica.iso(Logica.addDays(Logica.parse(hoyMadrid), 1)));
+if (process.argv.includes("--clave")) {
+  const clave = modo ? `${fechaAviso}-${modo}` : "ninguna";
+  if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `clave=${clave}\n`);
+  console.log(`Aviso que toca: ${clave}`);
+  process.exit(0);
+}
+if (!modo) { console.log(`Son las ${horaMadrid}h en Madrid: no toca enviar.`); process.exit(0); }
 
 const D = await descifrar(JSON.parse(readFileSync("datos.cifrados.json", "utf8")), env.CODIGO_FAMILIAR);
-const fecha = modo === "hoy" ? hoyMadrid : Logica.iso(Logica.addDays(Logica.parse(hoyMadrid), 1));
-const aviso = Logica.resumenAviso(D, fecha, modo === "hoy" ? "hoy" : "manana");
+const fecha = fechaAviso;
+const aviso = Logica.resumenAviso(D, fecha, modo === "hoy" ? "hoy" : "manana", { privado: env.AVISOS_PRIVADOS === "1" });
 if (!aviso && env.FORZAR !== "1") { console.log(`Nada especial el ${fecha}: no se envía aviso.`); process.exit(0); }
 const mensaje = esPrueba
   ? { titulo: "¡Avisos activados! 🩷🩵", cuerpo: "A partir de ahora recibirás lo de cada día a las 7:00 y lo de mañana a las 19:00." + (aviso ? "\n\n" + aviso.titulo + ":\n" + aviso.cuerpo : "") }
@@ -38,7 +51,8 @@ if (existsSync("suscripciones.cifradas.json")) {
 }
 subs = subs.filter((s, i, a) => s && s.endpoint && a.findIndex(x => x.endpoint === s.endpoint) === i);
 if (!subs.length) { console.log("No hay móviles suscritos todavía."); process.exit(0); }
-webpush.setVapidDetails("mailto:gabiarno@gmail.com", env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+// Contacto para el servicio de push: un mailto: o la URL de la app (por defecto).
+webpush.setVapidDetails(env.VAPID_SUBJECT || "https://momentosespeciales.github.io/Kibi/", env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
 
 let ok = 0;
 for (const s of subs) {

@@ -2,9 +2,10 @@ name: Avisos diarios
 
 on:
   schedule:
-    # 7:00 y 19:00 en Madrid. Se lanza a dos horas UTC para cubrir horario de invierno y de verano;
-    # el script solo envía cuando en Madrid son exactamente las 7 o las 19.
-    - cron: "0 5,6,17,18 * * *"
+    # 7:00 y 19:00 en Madrid. Se lanza a dos horas UTC para cubrir horario de invierno y de verano.
+    # Minuto 17 y no en punto: a las horas en punto GitHub va más cargado y se retrasa.
+    # El script acepta hasta una hora de retraso y la caché de Actions evita enviar dos veces.
+    - cron: "17 5,6,17,18 * * *"
   # Cuando se añade un móvil, se envía un aviso de prueba
   push:
     branches: [main]
@@ -25,6 +26,10 @@ concurrency:
   group: avisos
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: write # para guardar qué avisos se han enviado y mantener el cron activo
+
 jobs:
   avisar:
     runs-on: ubuntu-latest
@@ -35,7 +40,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --omit=dev
+      - name: Ver qué aviso toca
+        id: toca
+        if: github.event_name == 'schedule'
+        run: node scripts/avisar.mjs --clave
+      - name: Comprobar si ya se envió
+        id: enviado
+        if: github.event_name == 'schedule' && steps.toca.outputs.clave != 'ninguna'
+        uses: actions/cache/restore@v4
+        with:
+          path: .aviso-enviado
+          key: aviso-${{ steps.toca.outputs.clave }}
+          lookup-only: true
       - name: Enviar aviso
+        id: enviar
+        if: github.event_name != 'schedule' || (steps.toca.outputs.clave != 'ninguna' && steps.enviado.outputs.cache-hit != 'true')
         run: node scripts/avisar.mjs
         env:
           MODO: ${{ github.event_name == 'workflow_dispatch' && inputs.modo || github.event_name == 'push' && 'prueba' || 'auto' }}
@@ -44,3 +63,20 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          AVISOS_PRIVADOS: ${{ vars.AVISOS_PRIVADOS }}
+      - name: Apuntar que ya se envió
+        if: github.event_name == 'schedule' && steps.enviar.outcome == 'success'
+        run: date -u > .aviso-enviado
+      - if: github.event_name == 'schedule' && steps.enviar.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: .aviso-enviado
+          key: aviso-${{ steps.toca.outputs.clave }}
+      # GitHub desactiva los cron tras 60 días sin actividad en el repositorio. Volver a activarlo lo evita.
+      - name: Mantener el cron activo
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/avisos.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}

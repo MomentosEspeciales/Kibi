@@ -1,9 +1,10 @@
-/* KiBi · A calm family notebook. Pink and blue remain each child's landmarks. */
+/* KiBi · A calm family notebook. Each child gets a colour tone (tono-azul, tono-rosa…) as a landmark. */
 :root {
   --bg: #faf8f5; --surface: #fff; --ink: #293b3a; --muted: #687773; --line: #e8ece7;
   --pink: #d85983; --pink-soft: #fff0f3; --pink-ink: #a63e61;
   --blue: #3f7da8; --blue-soft: #edf5fc; --blue-ink: #2d6388;
   --mint: #356d58; --mint-soft: #eaf3e9; --sun: #805c25; --sun-soft: #fcf2df;
+  --lila: #7a5bb0; --lila-soft: #f3effb; --lila-ink: #5d438c;
   --accent: #376653; --accent-soft: #eef3e9; --shadow: 0 8px 28px #354c4510;
   --display: "Fredoka", "Avenir Next Rounded", system-ui, sans-serif;
   --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -58,8 +59,12 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .daytitle span { font: 600 17px var(--body); color: var(--muted); }
 .child-count, .count { font-size: 15px; font-weight: 800; border: 1px solid var(--line); padding: 5px 10px; border-radius: 9px; color: var(--muted); white-space: nowrap; }
 .kid { align-self: start; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow); border-top: 5px solid var(--tone); }
-.daniel { --tone: var(--blue); --soft: var(--blue-soft); --tink: var(--blue-ink); }
-.laia { --tone: var(--pink); --soft: var(--pink-soft); --tink: var(--pink-ink); }
+.tono-azul { --tone: var(--blue); --soft: var(--blue-soft); --tink: var(--blue-ink); }
+.tono-rosa { --tone: var(--pink); --soft: var(--pink-soft); --tink: var(--pink-ink); }
+.tono-verde { --tone: var(--mint); --soft: var(--mint-soft); --tink: var(--mint); }
+.tono-naranja { --tone: var(--sun); --soft: var(--sun-soft); --tink: var(--sun); }
+.tono-lila { --tone: var(--lila); --soft: var(--lila-soft); --tink: var(--lila-ink); }
+.duda { display: inline-flex; align-items: flex-start; gap: 6px; margin-top: 10px; padding: 8px 11px; border-radius: 12px; font-size: 15px; font-weight: 800; color: var(--sun); background: var(--sun-soft); }
 .kid-head { position: relative; display: flex; gap: 16px; align-items: center; padding: 24px; margin-bottom: 20px; background: linear-gradient(125deg, var(--soft), var(--surface)); }
 .kid-head::after { content: ""; width: 12px; height: 12px; flex: none; border-right: 2px solid var(--tink); border-bottom: 2px solid var(--tink); transform: rotate(45deg); margin-left: auto; align-self: center; }
 .kid[open] > .kid-head::after { transform: rotate(225deg); }
@@ -197,6 +202,7 @@ footer button { min-height: 44px; justify-self: center; background: transparent;
     --pink: #e88eb1; --pink-soft: #3e293b; --pink-ink: #ffc0d7;
     --blue: #80b9e2; --blue-soft: #24394f; --blue-ink: #b0d8f7;
     --mint: #a6d6b7; --mint-soft: #263c33; --sun: #edce91; --sun-soft: #3a3328;
+    --lila: #c2a8ec; --lila-soft: #332b45; --lila-ink: #dccbf7;
     --accent: #a6d6b7; --accent-soft: #293b35; --shadow: none;
     color-scheme: dark;
   }

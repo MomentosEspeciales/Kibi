@@ -1,189 +1,126 @@
-# KiBi 🩷🩵 — Prompt para la sesión de planificación
+# KiBi · Plan de producto y tareas
 
-> Copia todo este documento como primer mensaje de una sesión nueva. Pide al asistente que actúe como un equipo multidisciplinar y que, antes de proponer código, revise el repositorio `MomentosEspeciales/Kibi` y haga las preguntas que necesite.
+> Este repositorio es público. Aquí no van nombres, cursos, colegios, horarios ni direcciones de ninguna familia. El contexto de la familia piloto se guarda fuera del repositorio.
 
----
+## 1. Objetivo
 
-## 1. Qué te pido
+KiBi organiza el cole y las actividades de los peques en el móvil de dos adultos con prisa. Nació para una familia (la **familia piloto**), pero el objetivo es que la usen **más familias conocidas, por invitación (50 como máximo)**. El código no puede depender de quiénes son los niños: todo sale de los datos.
 
-Actúa como un **equipo multidisciplinar** que planifica la siguiente versión de KiBi, la app familiar de Gabi y Kike para organizar el colegio y las actividades de sus hijos. Cada rol aporta su punto de vista, señala riesgos y propone opciones con su coste:
+Decisiones ya tomadas por la familia piloto:
 
-| Rol | Qué aporta |
+| Tema | Decisión |
 | --- | --- |
-| Producto (con la familia como usuaria) | Problemas reales, prioridades, qué se considera «hecho» |
-| UX/UI | Flujos en el móvil, accesibilidad, que lo use alguien con prisa por la mañana |
-| Arquitectura y backend | Dónde viven los datos, sincronización, coste (idealmente 0 €) |
-| Datos e IA | Extracción automática de circulares (PDF, ZIP, imágenes) y su fiabilidad |
-| Seguridad y privacidad | Datos de menores, cifrado, RGPD, credenciales del cole |
-| QA | Cómo probar sin usar datos reales de los niños |
-| DevOps | GitHub Actions, Pages, avisos push, despliegues |
+| Móviles | Android los dos. Avisos para los dos |
+| Entrada de circulares | La intranet escolar (Educamos) manda un **correo de aviso sin adjunto**. El PDF hay que descargarlo con sesión iniciada |
+| Publicación | **Automática**, con las dudas marcadas (no se aprueba cada cambio) |
+| Fuente de verdad | **KiBi**. Calendar se suscribe a un **ICS**. Drive y Claude Docs se retiran |
+| Backend | **Cloudflare (gratis)**: Workers + D1 |
+| Alcance | Familias conocidas, por invitación |
+| Datos del cole | **Se comparten por colegio y clase**: cada circular se procesa una vez para todas las familias de esa clase |
 
-**Esto no es un diseño cerrado.** Lo que está hecho funciona, pero se construyó rápido. Cuestiona cualquier decisión si hay una alternativa mejor.
+## 2. Diagnóstico
 
-**Entregables de la sesión:**
-1. Diagnóstico del estado actual (qué funciona, qué es frágil, qué falta).
-2. Arquitectura objetivo, con una única fuente de verdad para los datos.
-3. Diseño del proceso semanal de ingestión de circulares (automático, con revisión humana).
-4. Lista de mejoras priorizada (impacto / esfuerzo), agrupada por fases.
-5. Riesgos y decisiones que deben tomar Gabi y Kike.
-6. Plan de pruebas con datos sintéticos.
+**Funciona y se reutiliza**
+- `logica.js`: qué tiene cada niño un día. Funciona en el navegador y en Node, y lee los niños de los datos.
+- `agenda.js`: valida las anotaciones del móvil y las mezcla sobre la agenda base (`aplicar`).
+- `cripto.js`: PBKDF2 (210 000 iteraciones) + AES-GCM.
+- PWA sin conexión y avisos push con `web-push`.
 
----
+**Frágil**
+1. Hubo datos de menores en claro en el repositorio público (documentación). Ya están quitados, pero **siguen en el historial de git**.
+2. Un único código familiar elegido a mano, sin revocación y guardado en claro en `localStorage`. Cualquiera puede descargar `datos.cifrados.json` e intentar adivinar el código sin conexión.
+3. El cron de GitHub se retrasa y se desactiva tras 60 días sin actividad en el repositorio.
+4. Los datos están en cinco sitios (app, Calendar, Drive, Claude Docs y la memoria del asistente). Las anotaciones de cada móvil no se sincronizan y no entran en los avisos.
+5. La extracción de circulares no tenía validación. Ya hubo errores: una actividad apuntada en el día equivocado y una circular con una fecha cuyo día de la semana no cuadraba.
 
-## 2. Contexto de la familia
+## 3. Arquitectura objetivo: tres capas
 
-- **Gabi** (la que gestiona) y **Kike** (su pareja). Viven en El Masnou (Barcelona). Idioma de la app: español. Las circulares del cole llegan en catalán.
-- **Daniel**: 1ºB de Primaria. Tutora: Marta Valiente. Educación Física los viernes. Piscina con el cole algunos viernes de marzo a mayo. **Piscina extraescolar cada jueves a las 18:30**, fuera del cole.
-- **Laia Luna**: I3B de Infantil («la clase de los cangrejos»).
-- **Colegio**: Escolàpies El Masnou (Fundació Escolàpies). Horario 9:00–13:00 y 15:00–17:00. Curso del 8/9/2026 al 21/6/2027.
+| Capa | Contenido | Quién la ve | Dónde |
+| --- | --- | --- | --- |
+| **Colegio** | Curso, horario, festivos, circulares para todo el colegio | Familias con algún hijo en ese colegio | D1, en claro (no son datos personales) |
+| **Clase** | Actividades semanales de clase, eventos y tareas de las circulares de clase, tutora | Familias de esa clase | D1, en claro, solo para sus miembros |
+| **Familia** | Niños (nombre, color, clase), extraescolares, cumpleaños, tareas propias y hechas | Solo los móviles de esa familia | D1, **cifrado de extremo a extremo** (el servidor solo guarda datos ilegibles) |
 
----
+- **Composición en el cliente:** `componer(colegio, clases, familia)` devuelve el mismo objeto `D` que hoy usa `logica.js`. Lo de cada clase se asigna a los niños de esa clase. La lógica y la interfaz casi no cambian.
+- **El repositorio queda solo con código.** `datos.cifrados.json` y `suscripciones.cifradas.json` pasan a D1.
+- **Worker `kibi-api`**:
+  - Tablas: `colegios`, `clases`, `items` (ámbito colegio/clase, tipo, json, `origen`, `duda`), `familias` (blob cifrado, versión, clave envuelta, fechas con aviso), `familia_clases`, `dispositivos` (hash del token, suscripción push, revocado), `gestores`, `invitaciones`, `avisos_enviados`.
+  - Endpoints: `POST /familias` (con invitación de administrador), `POST /unirse`, `GET /agenda`, `GET/PUT /familia` (con `If-Match`), `POST /suscribir`, `PUT /clases/:id/items` (solo gestores), `GET /cal/:token.ics`.
+- **Claves:**
+  - Cada familia tiene una clave aleatoria. Se envuelve con un secreto largo que viaja en el `#fragmento` del enlace de invitación, que nunca llega al servidor.
+  - El móvil la guarda como `CryptoKey` no extraíble en IndexedDB, así que no hay que teclear ningún código.
+  - Cada móvil tiene su token y se puede revocar.
+- **Avisos sin que el servidor lea los datos de la familia:**
+  - El cliente sube solo las **fechas** en las que la familia tiene algo personal.
+  - El Cron Trigger del Worker manda `{fecha, modo, lineasClase}` a las 7:00 y a las 19:00, hora de Madrid.
+  - El service worker compone el texto con `logica.js` sobre los datos de la familia, que tiene descifrados en local, con opción de mostrar solo iniciales.
+- **ICS:** capas de colegio y clase. Lo personal solo si la familia lo activa, porque Google tiene que leerlo en claro.
+- **Coste:** con 50 familias se queda muy lejos de los límites del plan gratuito de Cloudflare.
 
-## 3. De dónde sale la información
+## 4. Circulares: una vez por clase
 
-### Educamos (intranet del colegio)
-- URL familias: `https://escolapieslainmaculadaelmasnou-escolapias.educamos.com/Home/IndexPadres`
-- Requiere **sesión iniciada en el navegador**. No hay API pública conocida.
-- Hay un selector por hijo. En «Espacio de <hijo>» → «Circulares» aparece una tabla (fecha y asunto). Hay que poner «Nº registros/Pág.» en «Mostrar todos».
-- Cada circular es un enlace a `/Comunicacion/Circulares/DescargarAdjuntos?CircularId=<guid>` que devuelve:
-  - un **PDF** con texto (la mayoría, en catalán), o
-  - un **PDF que es solo imagen** (por ejemplo, el cartel de Halloween o las cuotas), o
-  - un **ZIP** con varios PDF (por ejemplo, los menús o el programa del Conservatori del Liceu).
-- Muchas circulares son comunes a los dos hijos y algunas son específicas (prefijos `PRI`, `INF`, `1r`, `I3B`; `TE` es para todo el colegio).
-- Volumen: unas 24 circulares de Daniel y 22 de Laia entre septiembre y octubre; unas 30 distintas.
+1. Detectar el correo de aviso de Educamos en Gmail (tarea programada).
+2. Descargar el PDF o ZIP en Chrome, en el ordenador de un **gestor** y con su sesión. El asistente nunca escribe contraseñas. Si la sesión ha caducado, se para y se avisa.
+3. Extraer cada circular a `circular.json`: id, prefijo, clases, fechas, acciones y confianza.
+4. `validar` → marcar las dudas en el campo `duda`.
+5. Publicar en la capa de clase o de colegio, con `origen: <CircularId>` (para poder deshacer una circular entera).
+6. Push a las familias afectadas si hay algo urgente, y a los gestores si hay dudas.
 
-### Lo que se ha hecho a mano
-Se leyó cada PDF en el navegador con pdf.js, se renderizaron los que eran imagen y se descomprimieron los ZIP con JSZip. Después se extrajo de cada circular: de quién es, información relevante, fechas y acciones de la familia.
+Alternativa: cualquier familia sube el PDF desde la app y un gestor lo revisa. El original se guarda cifrado en R2.
 
-### Otras fuentes posibles (sin explorar)
-- ¿Envía Educamos un correo por cada circular nueva? Si es así, el Gmail de Gabi podría ser la entrada del proceso.
-- La app móvil de Educamos (notificaciones).
-- Mensajes de WhatsApp del grupo de clase. En la app hay un «pegado inteligente» pendiente.
+## 5. Tareas por fases
 
----
+### Fase 0: privacidad y desacoplar el código
+- [x] Quitar los datos personales de `README.md` y de este documento.
+- [x] Textos genéricos en `index.html`, `manifest.webmanifest` y `package.json`.
+- [x] Colores por niño con el campo `color` (`azul`, `rosa`, `verde`, `naranja`, `lila`), o por orden si falta. Sustituye las clases CSS con nombres.
+- [x] Contacto VAPID configurable (`VAPID_SUBJECT`), sin correo escrito en el código.
+- [x] Pruebas con familias ficticias (`tests/fixtures/`), que se ejecutan en el CI.
+- [x] Avisos con solo iniciales (`AVISOS_PRIVADOS=1`).
+- [ ] **Familia piloto:** limpiar el historial de git (o empezar un repositorio limpio) y cambiar el código familiar.
 
-## 4. Estado actual del sistema
+### Fase 1: fiabilidad y calidad de datos
+- [x] `npm run validar`: formato, fecha frente al día de la semana del texto, duplicados, eventos en días sin cole y fuera del curso. Se ejecuta antes de publicar.
+- [x] Campo `duda` con el distintivo ⚠️ en las tarjetas, la semana y las tareas.
+- [x] Versión de la caché del service worker calculada al publicar.
+- [x] Avisos: cron a :17, hasta 1 hora de margen, registro de lo enviado (caché de Actions) y cron que se mantiene activo.
 
-### 4.1 Repositorio `MomentosEspeciales/Kibi` (público)
+### Fase 2: backend multifamilia
+- [ ] Carpeta `worker/` (Wrangler) con el esquema D1 y las migraciones.
+- [ ] Invitaciones, tokens por móvil y revocación.
+- [ ] `componer()` en `agenda.js` con pruebas. Sincronización con caché local, manteniendo la exportación `.kibi`.
+- [ ] Alta: crear familia, añadir niños (nombre, color, colegio y clase) e invitar a la pareja.
+- [ ] `scripts/migrar.mjs`: de los datos actuales a colegio, clases y familia piloto.
+- [ ] **Familia piloto:** crear la cuenta de Cloudflare, la base D1 y los secretos.
 
-App web instalable (PWA) publicada en **https://momentosespeciales.github.io/Kibi/**.
+### Fase 3: avisos e ICS
+- [ ] Cron Trigger y `POST /suscribir` con un toque. El service worker compone el texto final.
+- [ ] Retirar `avisos.yml`, `suscribir.mjs` y los archivos cifrados del repositorio.
+- [ ] ICS por familia (UID estable, alarmas 1 y 2 días antes).
+- [ ] **Familia piloto:** suscribir Calendar al ICS, borrar los eventos creados a mano y retirar Drive y Claude Docs.
 
-| Archivo | Para qué |
-| --- | --- |
-| `index.html`, `styles.css` | La app: vista Hoy / Mañana / Semana, tarjeta por niño, pendientes, avisos, anotaciones personales |
-| `logica.js` | Qué tiene cada niño un día concreto. Se comparte entre el navegador y Node |
-| `cripto.js` | Cifrado PBKDF2 (210 000 iteraciones) + AES-GCM con el **código familiar** |
-| `agenda.js` | Validación de las anotaciones personales y cómo se mezclan con la agenda del cole |
-| `datos.cifrados.json` | **La agenda del cole, cifrada.** Es lo que lee la app |
-| `datos/eventos.json` | La misma agenda en claro. **No se sube** (`.gitignore`) |
-| `suscripciones.cifradas.json` | Móviles suscritos a los avisos push, cifrados. Todavía no existe porque nadie se ha suscrito |
-| `sw.js` | Service worker: caché sin conexión, recepción de push y apertura al tocar el aviso |
-| `config.js` | Clave pública VAPID |
-| `scripts/cifrar.mjs`, `descifrar.mjs` | Pasar de `datos/eventos.json` a `datos.cifrados.json` y al revés |
-| `scripts/suscribir.mjs` | Añadir un móvil a la lista de avisos |
-| `scripts/avisar.mjs` | Calcula el resumen del día y lo envía con `web-push` |
-| `scripts/probar.mjs`, `tests/agenda.test.cjs` | Pruebas (las de agenda usan datos sintéticos) |
-| `.github/workflows/publicar.yml` | Publica en Pages en cada push a `main` (con prueba previa) |
-| `.github/workflows/avisos.yml` | Avisos diarios. También envía uno de prueba al cambiar las suscripciones |
+### Fase 4: circulares por clase
+- [ ] Rol de gestor y pantalla «Dudas por revisar».
+- [ ] `circular.json`, `scripts/fusionar.mjs` y la tarea programada (Gmail → Chrome → API).
+- [ ] Subir circulares desde la app (R2 cifrado) con cola de revisión.
+- [ ] Push inmediato si la fecha límite es en menos de 3 días.
 
-**Secretos del repositorio** (ya creados por Gabi): `CODIGO_FAMILIAR`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `PUSH_SUBSCRIPTIONS` (`[]`). El código familiar no está en este documento a propósito.
+### Fase 5: producto
+- [ ] Menú del comedor por colegio.
+- [ ] Contactos del cole.
+- [ ] Pegado inteligente de mensajes de WhatsApp.
+- [ ] Texto RGPD para las familias invitadas: quién guarda qué y cómo darse de baja.
 
-**Modelo de datos (`datos/eventos.json`):**
-- `curso` (inicio y fin), `horario` (normal y días especiales), `ninos` (id, nombre, curso, tutora)
-- `sinCole`: festivos y vacaciones (`fecha`, o `desde`/`hasta`, y `motivo`)
-- `semanal`: lo que se repite (`nino`, `dia` 0–6, `hora`, `llevar`, `desde`/`hasta`, `soloConCole`)
-- `eventos`: cosas puntuales (`fecha`, `fechas[]` o `desde`/`hasta`; `ninos[]`, `hora`, `detalle`, `llevar`, `anual`)
-- `tareas`: cosas que hacer (`ninos[]`, `titulo`, `detalle`, `limite` opcional)
+## 6. Riesgos y decisiones
 
-**Avisos push:**
-- Un cron de GitHub Actions se lanza a las 5, 6, 17 y 18 UTC. El script solo envía cuando en Madrid son las 7:00 (lo de hoy) o las 19:00 (lo de mañana), así cubre el horario de invierno y el de verano.
-- Solo se envía si hay algo especial: un festivo, una actividad, algo que llevar o una tarea que vence.
-- Para suscribir un móvil: se instala la app, se pulsa «Activar avisos», se copia el código del móvil y alguien con el repositorio ejecuta `suscribir.mjs` y hace push. Es manual.
-- En iPhone los avisos solo funcionan con la app instalada en la pantalla de inicio (iOS 16.4 o posterior).
+- Quien administra pasa a ser **responsable del tratamiento** de los datos de otras familias. Hace falta consentimiento y una baja real.
+- La capa de clase está en claro en D1 (actividades, tutora). Es aceptable porque el acceso es por invitación y no incluye nombres de niños.
+- Si una familia pierde todos sus móviles y el enlace de invitación, pierde sus datos personales. Se mitiga con la exportación `.kibi` y con varios móviles por familia.
+- La ingestión depende de que un gestor tenga el ordenador encendido con Chrome y la sesión de Educamos abierta.
 
-**Anotaciones personales** (añadidas por Gabi): cumpleaños (con repetición anual), tareas, extraescolares y eventos creados desde el móvil.
-- Se guardan cifradas en el `localStorage` de ese móvil.
-- **No se sincronizan** entre móviles; hay que exportar e importar un archivo `.kibi` a mano.
-- **No entran en los avisos push**, porque GitHub Actions no las ve.
+## 7. Pruebas (sin datos reales)
 
-### 4.2 Lo que hay fuera de la app (los mismos datos, duplicados)
-
-| Dónde | Qué | Cómo se actualiza |
-| --- | --- | --- |
-| Google Calendar de Gabi | Eventos «Cole · …» (Daniel), (Laia Luna) o (niños), con Kike invitado y recordatorios 1 y 2 días antes. Más «Piscina Daniel (extraescolar)» cada jueves a las 18:30 | Creados por el asistente; nunca se borran automáticamente |
-| Google Drive, carpeta «Niños» | «00 · Resumen general», «Daniel · Resumen del curso» y «Laia Luna · Resumen del curso» (Google Docs), y subcarpetas «Circulares PDF» **vacías** | Los Docs se recrean enteros (no se editan). Los PDF están solo en un `niños.zip` en el ordenador de Gabi |
-| Claude Docs | «Circulares escolares — Daniel y Laia Luna»: pendientes, calendario y tablas por circular | Lo edita el asistente |
-| Tarea programada de Claude | «Revisión semanal circulares niños», lunes 9:30 | Ver la sección 5 |
-
-**Problema clave: hoy no hay una única fuente de verdad.** La misma información vive en cinco sitios (app, Calendar, Drive, Claude Docs y la memoria del asistente) y se puede desincronizar.
-
----
-
-## 5. El proceso semanal actual (lo que hace la tarea de los lunes)
-
-1. Abrir Educamos en Chrome con la sesión de Gabi. Si la sesión ha caducado, parar y avisar: **el asistente nunca escribe contraseñas**.
-2. Para cada hijo, listar las circulares publicadas desde la última revisión.
-3. Leer cada circular (PDF con texto, PDF que es imagen o ZIP) y extraer: de quién es, información relevante, fechas y acciones de la familia.
-4. Actualizar el documento de Claude Docs, los resúmenes de Drive y Google Calendar (sin duplicar eventos).
-5. Enviar a Gabi un resumen breve.
-
-**Limitaciones conocidas de este proceso:**
-- La tarea quedó configurada para ejecutarse **en la nube, sin acceso al ordenador ni a Chrome**, así que no puede abrir Educamos. Gabi tendría que activar «Requerir este ordenador» en la app de escritorio, y aun así haría falta el ordenador encendido y Chrome con la sesión de Educamos abierta.
-- **Todavía no actualiza KiBi** (`datos/eventos.json` → `datos.cifrados.json` → push). Tendría que hacerlo, y sería el paso más importante.
-- La extracción la hace un modelo sin revisión humana antes de publicar. Ya hubo un error: la piscina con el cole se apuntó en jueves cuando en 2027 cae en viernes, y hubo que corregirlo.
-- Las circulares a veces traen datos dudosos (una fiesta del «sábado 30 de mayo» de 2027, que es domingo). Hace falta un mecanismo para marcar dudas.
-- El asistente no puede crear repositorios, secretos ni configurar Pages o Actions por API: eso lo hace Gabi a mano.
-
----
-
-## 6. Ideas de mejora (abiertas, para debatir)
-
-**Datos y arquitectura**
-- Que `datos/eventos.json` cifrado sea la **única fuente de verdad**, y que de ahí se generen Calendar, Drive y los avisos.
-- Un backend ligero y gratuito (Cloudflare Workers + KV/D1, Supabase, Firebase…) para:
-  - sincronizar las anotaciones personales entre móviles y que entren en los avisos;
-  - suscribir móviles a los avisos con un toque, sin copiar códigos;
-  - recibir circulares nuevas.
-- Publicar un calendario ICS privado (con URL secreta) generado desde los datos, en vez de crear eventos uno a uno.
-
-**Ingestión de circulares**
-- Partir del correo de aviso de Educamos (si existe) en vez de navegar por la intranet.
-- Un flujo con revisión humana:
-  1. extracción automática;
-  2. propuesta de cambios como Pull Request (o pantalla de «revisar y aprobar» en la app);
-  3. Gabi aprueba y se publica.
-- Guardar cada circular original (cifrada) con un enlace desde el evento, para poder consultarla.
-- Clasificar por niño según el prefijo (`PRI`, `INF`, `1r`, `I3B`, `TE`) y por el contenido.
-- Detectar inconsistencias: fecha y día de la semana que no cuadran, eventos duplicados, cambios respecto a una circular anterior.
-
-**Producto y UX**
-- Que entrar sea muy rápido: hoy se pide el código familiar la primera vez en cada móvil.
-- Avisos más útiles: «mañana llevar…», recordatorio de la fecha límite de una tarea, y avisos en el momento cuando llega una circular urgente.
-- Que Kike pueda marcar tareas como hechas y que Gabi lo vea (hoy las tareas hechas son locales de cada móvil).
-- Menú del comedor del día (llega en ZIP mensual).
-- Contactos útiles del cole (secretaría, comedor, tutoras).
-
-**Privacidad y seguridad**
-- Revisar si el cifrado actual basta: el repositorio es público, solo hay un código familiar compartido y no se puede revocar el acceso de un móvil.
-- Política sobre las credenciales de Educamos: ¿se pueden automatizar de forma segura y conforme a las condiciones de uso?
-- Minimizar los datos personales en los avisos: se ven en la pantalla de bloqueo.
-
----
-
-## 7. Restricciones
-
-- **Coste:** 0 € o casi. Sin servidores de pago salvo que el beneficio sea claro.
-- **Privacidad:** son datos de menores. Nada en claro en sitios públicos.
-- **Credenciales:** el asistente no escribe contraseñas ni claves en formularios ni crea cuentas. Eso lo hace Gabi.
-- **Usuarios:** dos adultos con prisa y móviles distintos (al menos uno puede ser iPhone).
-- **Idioma:** la app en español; las circulares llegan en catalán.
-- **Mantenimiento:** que funcione semanas sin tocarlo y que, cuando falle, avise claramente de qué ha fallado.
-
-## 8. Preguntas para Gabi y Kike (que el equipo debe hacer al principio)
-
-1. ¿Qué móviles usáis (iPhone o Android)? ¿Queréis avisos los dos?
-2. ¿Llega un correo cuando hay una circular nueva en Educamos?
-3. ¿Queréis aprobar cada cambio antes de que llegue a la app, o preferís que sea automático y avise de las dudas?
-4. ¿Seguimos con Google Calendar, Drive y Claude Docs, o KiBi pasa a ser el único sitio?
-5. ¿Aceptáis un backend gratuito de terceros (Cloudflare o Supabase) para sincronizar?
-6. ¿Qué más queréis en KiBi (otras actividades, médicos, cumpleaños de amigos, menús)?
+- Datos ficticios: hoy, `tests/fixtures/eventos.sintetico.json`. Para la fase 2: dos colegios, tres clases y tres familias (una con hermanos en clases distintas).
+- `node --test`: lógica, validación, `componer()`, fusión de circulares y ventana horaria de los avisos.
+- Worker con `wrangler dev`/Miniflare: aislamiento entre familias, revocación, conflictos de versión e ICS válido.
+- De extremo a extremo: despliegue de vista previa, alta con invitación, push a un Android de prueba y ICS en una cuenta de Google de pruebas.
