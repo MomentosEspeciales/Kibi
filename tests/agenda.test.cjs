@@ -1,32 +1,32 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const A = require('../agenda.js'), L = require('../logica.js'), C = require('../cripto.js');
-const base = {curso:{inicio:'2026-09-01',fin:'2027-06-30'},horario:{normal:'9–17',especiales:[]},ninos:[{id:'daniel',nombre:'Daniel'},{id:'laia',nombre:'Laia'}],semanal:[],eventos:[],tareas:[],sinCole:[{fecha:'2026-11-02',motivo:'Festivo'}]};
-const entry = extra => ({id:'test-1',tipo:'evento',titulo:'Excursión',ninos:['daniel'],fecha:'2026-11-03',hora:'16:00',...extra});
-const validar = entries => A.validarLista(entries,['daniel','laia']);
+const base = {curso:{inicio:'2026-09-01',fin:'2027-06-30'},horario:{normal:'9–17',especiales:[]},ninos:[{id:'nico',nombre:'Nico'},{id:'vera',nombre:'Vera'}],semanal:[],eventos:[],tareas:[],sinCole:[{fecha:'2026-11-02',motivo:'Festivo'}]};
+const entry = extra => ({id:'test-1',tipo:'evento',titulo:'Excursión',ninos:['nico'],fecha:'2026-11-03',hora:'16:00',...extra});
+const validar = entries => A.validarLista(entries,['nico','vera']);
 test('birthday repeats annually, never before its first occurrence',()=>{
- const D=A.aplicar(base,validar([entry({tipo:'cumple',titulo:'Ana',fecha:'2026-11-03',anual:true,ninos:['daniel','laia']})]));
- assert.equal(L.itemsDe(D,'daniel','2027-11-03')[0].titulo,'Cumpleaños · Ana');
- assert.equal(L.itemsDe(D,'laia','2026-11-03').length,1);
- assert.equal(L.itemsDe(D,'daniel','2025-11-03').length,0);
- assert.equal(L.itemsDe(D,'daniel','2027-11-04').length,0);
+ const D=A.aplicar(base,validar([entry({tipo:'cumple',titulo:'Ana',fecha:'2026-11-03',anual:true,ninos:['nico','vera']})]));
+ assert.equal(L.itemsDe(D,'nico','2027-11-03')[0].titulo,'Cumpleaños · Ana');
+ assert.equal(L.itemsDe(D,'vera','2026-11-03').length,1);
+ assert.equal(L.itemsDe(D,'nico','2025-11-03').length,0);
+ assert.equal(L.itemsDe(D,'nico','2027-11-04').length,0);
  assert.equal(base.eventos.length,0);
 });
 test('one-off events stay one-off and retain place and equipment',()=>{
  const D=A.aplicar(base,validar([entry({lugar:'Piscina',llevar:'Toalla'})]));
- assert.match(L.itemsDe(D,'daniel','2026-11-03')[0].detalle,/Piscina/);
- assert.equal(L.itemsDe(D,'daniel','2026-11-03')[0].llevar,'Toalla');
- assert.equal(L.itemsDe(D,'daniel','2027-11-03').length,0);
+ assert.match(L.itemsDe(D,'nico','2026-11-03')[0].detalle,/Piscina/);
+ assert.equal(L.itemsDe(D,'nico','2026-11-03')[0].llevar,'Toalla');
+ assert.equal(L.itemsDe(D,'nico','2027-11-03').length,0);
 });
 test('weekly recurrence respects date range, selected children and school holidays',()=>{
  const e=entry({tipo:'extra',dias:[1,3],fecha:'2026-11-01',hasta:'2026-11-10',soloConCole:true});
  const D=A.aplicar(base,validar([e]));
- assert.equal(L.itemsDe(D,'daniel','2026-11-02').length,0);
- assert.equal(L.itemsDe(D,'daniel','2026-11-04').length,1);
- assert.equal(L.itemsDe(D,'daniel','2026-11-11').length,0);
- assert.equal(L.itemsDe(D,'laia','2026-11-04').length,0);
+ assert.equal(L.itemsDe(D,'nico','2026-11-02').length,0);
+ assert.equal(L.itemsDe(D,'nico','2026-11-04').length,1);
+ assert.equal(L.itemsDe(D,'nico','2026-11-11').length,0);
+ assert.equal(L.itemsDe(D,'vera','2026-11-04').length,0);
  const libre=A.aplicar(base,validar([{...e,soloConCole:false}]));
- assert.equal(L.itemsDe(libre,'daniel','2026-11-02').length,1);
+ assert.equal(L.itemsDe(libre,'nico','2026-11-02').length,1);
 });
 test('tasks support optional deadlines and distinct identities for equal titles',()=>{
  const D=A.aplicar(base,validar([entry({tipo:'tarea',fecha:''}),entry({id:'test-2',tipo:'tarea'})]));
